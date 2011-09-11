@@ -41,3 +41,11 @@ form > table td {
     color: #999;
     text-decoration: underline;
 }
+form .errors {
+    color: #900;
+}
+#topbar li {
+    list-style: none;
+    display: inline;
+    padding-left: 0.5em;
+}

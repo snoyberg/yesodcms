@@ -41,6 +41,7 @@ library
                      Handler.Wiki
                      Handler.EditPage
                      Handler.UserFile
+                     Handler.Profile
     ghc-options:   -Wall -threaded -O0 -Werror
 
 executable         yesodcms

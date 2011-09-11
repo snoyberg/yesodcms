@@ -1,0 +1,6 @@
+<form method=post enctype=#{enctype}>
+    <table>
+        ^{widget}
+        <tr>
+            <td colspan=3>
+                <input type=submit value="Update Profile">

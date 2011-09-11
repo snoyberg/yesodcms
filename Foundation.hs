@@ -188,6 +188,7 @@ instance YesodBreadcrumbs Cms where
         return (this, Just $ WikiR parent)
 
     breadcrumb (EditPageR page) = return ("Edit page: " `T.append` (T.intercalate "/" page), Just RootR)
+    breadcrumb ProfileR = return ("Profile", Just RootR)
 
     breadcrumb UsersR = return ("User list", Just RootR)
     breadcrumb (UserFileR user []) = return (user, Just UsersR)

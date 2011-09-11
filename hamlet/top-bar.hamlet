@@ -3,10 +3,14 @@
         $maybe u <- mu
             _{MsgLoggedInAs $ userEmail $ snd u}
             \ #
+            <a href=@{ProfileR}>Profile
+            \ #
             <a href=@{AuthR LogoutR}>_{MsgLogout}
         $nothing
             ^{apLogin authBrowserId' AuthR}
     <ul>
+        <li>
+            <a href=@{UsersR}>Browse
         <li>
             <a href=@{WikiR mempty}>Wiki
 <nav #breadcrumbs>
