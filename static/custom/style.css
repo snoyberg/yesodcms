@@ -1,0 +1,43 @@
+body {
+    font-family: Calibri, Helvetica, "Droid Sans", "DejaVu Sans", Verdana, sans-serif;
+    margin: 0.5em auto;
+    max-width: 960px;
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family: Cambria, Georgia, "Droid Serif", "DejaVu Serif", serif;
+}
+#topbar {
+    text-align: right;
+    background: url(logo.gif) no-repeat;
+    height: 60px;
+    padding-top: 20px;
+    color: #999;
+}
+#message {
+    margin: 0.5em;
+    border: 2px solid #700;
+    padding: 0.5em;
+}
+a, a:visited {
+    color: blue;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+form > table {
+    border-collapse: collapse;
+}
+form > table td {
+    border: 1px solid #999;
+    padding: 0.5em;
+}
+#breadcrumbs {
+    font-size: 0.8em;
+    margin: 0.7em 0 2em 2em;
+    color: #999;
+}
+#breadcrumbs a, #breadcrumbs a:visited {
+    color: #999;
+    text-decoration: underline;
+}

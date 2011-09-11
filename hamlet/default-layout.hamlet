@@ -1,10 +1,9 @@
 !!!
-<html
-    <head
+<html>
+    <head>
         <title>#{pageTitle pc}
         <link rel="stylesheet" href=@{StaticR css_normalize_css}>
+        <link rel="stylesheet" href=@{StaticR custom_style_css}>
         ^{pageHead pc}
-    <body
-        $maybe msg <- mmsg
-            <div #message>#{msg}
+    <body>
         ^{pageBody pc}

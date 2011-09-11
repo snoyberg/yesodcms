@@ -1,9 +1,3 @@
 User
-    ident Text
-    password Text Maybe Update
-    UniqueUser ident
-Email
     email Text
-    user UserId Maybe Update
-    verkey Text Maybe Update
-    UniqueEmail email
+    UniqueUser email

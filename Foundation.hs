@@ -20,8 +20,7 @@ import Yesod
 import Yesod.Static (Static, base64md5, StaticRoute(..))
 import Settings.StaticFiles
 import Yesod.Auth
-import Yesod.Auth.OpenId
-import Yesod.Auth.Email
+import Yesod.Auth.BrowserId (authBrowserId')
 import Yesod.Logger (Logger, logLazyText)
 import qualified Settings
 import System.Directory
@@ -29,16 +28,12 @@ import qualified Data.ByteString.Lazy as L
 import Database.Persist.GenericSql
 import Settings (hamletFile, cassiusFile, luciusFile, juliusFile, widgetFile)
 import Model
-import Data.Maybe (isJust)
-import Control.Monad (join, unless)
-import Network.Mail.Mime
+import Control.Monad (unless)
 import qualified Data.Text.Lazy.Encoding
 import Text.Jasmine (minifym)
 import qualified Data.Text as T
 import Web.ClientSession (getKey)
-import Text.Blaze.Renderer.Utf8 (renderHtml)
-import Text.Hamlet (shamlet)
-import Text.Shakespeare.Text (stext)
+import Data.Text (Text)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -50,6 +45,8 @@ data Cms = Cms
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
     }
+
+mkMessage "Cms" "messages" "en"
 
 -- This is where we define all of the routes in our application. For a full
 -- explanation of the syntax, please see:
@@ -82,9 +79,11 @@ instance Yesod Cms where
 
     defaultLayout widget = do
         mmsg <- getMessage
+        mu <- maybeAuth
+        (title', parents) <- breadcrumbs
         pc <- widgetToPageContent $ do
+            $(widgetFile "top-bar")
             widget
-            addCassius $(cassiusFile "default-layout")
         hamletToRepHtml $(hamletFile "default-layout")
 
     -- This is done to provide an optimization for serving static files from
@@ -138,11 +137,9 @@ instance YesodAuth Cms where
         case x of
             Just (uid, _) -> return $ Just uid
             Nothing -> do
-                fmap Just $ insert $ User (credsIdent creds) Nothing
+                fmap Just $ insert $ User $ credsIdent creds
 
-    authPlugins = [ authOpenId
-                  , authEmail
-                  ]
+    authPlugins = [authBrowserId']
 
 -- Sends off your mail. Requires sendmail in production!
 deliver :: Cms -> L.ByteString -> IO ()
@@ -152,76 +149,13 @@ deliver _ = sendmail
 deliver y = logLazyText (getLogger y) . Data.Text.Lazy.Encoding.decodeUtf8
 #endif
 
-instance YesodAuthEmail Cms where
-    type AuthEmailId Cms = EmailId
-
-    addUnverified email verkey =
-        runDB $ insert $ Email email Nothing $ Just verkey
-
-    sendVerifyEmail email _ verurl = do
-        y <- getYesod
-        liftIO $ deliver y =<< renderMail' Mail
-            {
-              mailHeaders =
-                [ ("From", "noreply")
-                , ("To", email)
-                , ("Subject", "Verify your email address")
-                ]
-            , mailParts = [[textPart, htmlPart]]
-            }
-      where
-        textPart = Part
-            { partType = "text/plain; charset=utf-8"
-            , partEncoding = None
-            , partFilename = Nothing
-            , partContent = Data.Text.Lazy.Encoding.encodeUtf8 [stext|
-Please confirm your email address by clicking on the link below.
-
-\#{verurl}
-
-Thank you
-|]
-            , partHeaders = []
-            }
-        htmlPart = Part
-            { partType = "text/html; charset=utf-8"
-            , partEncoding = None
-            , partFilename = Nothing
-            , partContent = renderHtml [shamlet|
-<p>Please confirm your email address by clicking on the link below.
-<p>
-    <a href=#{verurl}>#{verurl}
-<p>Thank you
-|]
-            , partHeaders = []
-            }
-    getVerifyKey = runDB . fmap (join . fmap emailVerkey) . get
-    setVerifyKey eid key = runDB $ update eid [EmailVerkey =. Just key]
-    verifyAccount eid = runDB $ do
-        me <- get eid
-        case me of
-            Nothing -> return Nothing
-            Just e -> do
-                let email = emailEmail e
-                case emailUser e of
-                    Just uid -> return $ Just uid
-                    Nothing -> do
-                        uid <- insert $ User email Nothing
-                        update eid [EmailUser =. Just uid, EmailVerkey =. Nothing]
-                        return $ Just uid
-    getPassword = runDB . fmap (join . fmap userPassword) . get
-    setPassword uid pass = runDB $ update uid [UserPassword =. Just pass]
-    getEmailCreds email = runDB $ do
-        me <- getBy $ UniqueEmail email
-        case me of
-            Nothing -> return Nothing
-            Just (eid, e) -> return $ Just EmailCreds
-                { emailCredsId = eid
-                , emailCredsAuthId = emailUser e
-                , emailCredsStatus = isJust $ emailUser e
-                , emailCredsVerkey = emailVerkey e
-                }
-    getEmail = runDB . fmap (fmap emailEmail) . get
-
 instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage
+
+instance YesodBreadcrumbs Cms where
+    breadcrumb RootR = return ("Homepage", Nothing)
+
+    breadcrumb StaticR{} = return ("", Nothing)
+    breadcrumb AuthR{} = return ("", Nothing)
+    breadcrumb FaviconR{} = return ("", Nothing)
+    breadcrumb RobotsR{} = return ("", Nothing)

@@ -1,0 +1,15 @@
+<div #topbar>
+    <div>
+        $maybe u <- mu
+            _{MsgLoggedInAs $ userEmail $ snd u}
+            \ #
+            <a href=@{AuthR LogoutR}>_{MsgLogout}
+        $nothing
+            ^{apLogin authBrowserId' AuthR}
+<nav #breadcrumbs>
+    $forall p <- parents
+        <a href=@{fst p}>#{snd p}
+        \ &gt; #
+    #{title'}
+$maybe msg <- mmsg
+    <div #message>#{msg}
