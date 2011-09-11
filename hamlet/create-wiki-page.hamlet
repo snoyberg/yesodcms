@@ -1,0 +1,6 @@
+<p>The requested page does not exist. You can create it now.
+<ul>
+    $forall fh <- fhs
+        $maybe ext <- listToMaybe $ Set.toList $ fhExts fh
+            <li>
+                <a href=@{EditPageR $ pieces' ext}>#{fhName fh}

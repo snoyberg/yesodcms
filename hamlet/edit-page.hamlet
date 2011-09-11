@@ -1,0 +1,12 @@
+<form method=post enctype=#{enctype}>
+    <table>
+        ^{widget}
+        <tr>
+            <td colspan=3>
+                <input type=submit value="Update Topic">
+$if toView
+    <h3>View on site
+    <ul>
+        $forall route <- routes ts
+            <li>
+                <a href=@{snd route}>#{fst route}

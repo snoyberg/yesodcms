@@ -11,9 +11,4 @@ import Foundation
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getRootR :: Handler RepHtml
-getRootR = do
-    mu <- maybeAuth
-    defaultLayout $ do
-        h2id <- lift newIdent
-        setTitle "yesodcms homepage"
-        addWidget $(widgetFile "homepage")
+getRootR = defaultLayout $(widgetFile "homepage")

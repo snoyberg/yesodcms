@@ -34,6 +34,9 @@ import Text.Jasmine (minifym)
 import qualified Data.Text as T
 import Web.ClientSession (getKey)
 import Data.Text (Text)
+import Data.Monoid (mempty)
+import FormatHandler
+import FileStore
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -44,6 +47,8 @@ data Cms = Cms
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
+    , formatHandlers :: [FormatHandler]
+    , fileStore :: FileStore
     }
 
 mkMessage "Cms" "messages" "en"
@@ -82,6 +87,7 @@ instance Yesod Cms where
         mu <- maybeAuth
         (title', parents) <- breadcrumbs
         pc <- widgetToPageContent $ do
+            setTitle $ toHtml title'
             $(widgetFile "top-bar")
             widget
         hamletToRepHtml $(hamletFile "default-layout")
@@ -154,6 +160,13 @@ instance RenderMessage Cms FormMessage where
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
+    breadcrumb (WikiR []) = return ("Wiki", Just RootR)
+    breadcrumb (WikiR x) = do
+        let parent = init x
+            this = last x
+        return (this, Just $ WikiR parent)
+
+    breadcrumb (EditPageR page) = return ("Edit page: " `T.append` (T.intercalate "/" page), Just RootR)
 
     breadcrumb StaticR{} = return ("", Nothing)
     breadcrumb AuthR{} = return ("", Nothing)

@@ -17,6 +17,8 @@ import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
 import Data.Dynamic (Dynamic, toDyn)
 import Network.Wai.Middleware.Debug (debugHandle)
+import FormatHandler
+import FileStore
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -26,6 +28,8 @@ import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 
 -- Import all relevant handler modules here.
 import Handler.Root
+import Handler.Wiki
+import Handler.EditPage
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
@@ -49,7 +53,7 @@ withCms conf logger f = do
     s <- static Settings.staticDir
     Settings.withConnectionPool conf $ \p -> do
         runConnectionPool (runMigration migrateAll) p
-        let h = Cms conf logger s p
+        let h = Cms conf logger s p [textFormatHandler] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()
 #else

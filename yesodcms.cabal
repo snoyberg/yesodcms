@@ -35,7 +35,12 @@ library
                      Model
                      Settings
                      Settings.StaticFiles
+                     FormatHandler
+                     FileStore
                      Handler.Root
+                     Handler.Wiki
+                     Handler.EditPage
+    ghc-options:   -Wall -threaded -O0 -Werror
 
 executable         yesodcms
     if flag(devel)
@@ -82,6 +87,10 @@ executable         yesodcms
                  , warp
                  , blaze-builder
                  , cmdargs
+                 , containers
+                 , enumerator
+                 , system-filepath
+                 , system-fileio
 
     if !os(windows)
          build-depends: unix

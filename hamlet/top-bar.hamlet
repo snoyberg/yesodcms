@@ -6,6 +6,9 @@
             <a href=@{AuthR LogoutR}>_{MsgLogout}
         $nothing
             ^{apLogin authBrowserId' AuthR}
+    <ul>
+        <li>
+            <a href=@{WikiR mempty}>Wiki
 <nav #breadcrumbs>
     $forall p <- parents
         <a href=@{fst p}>#{snd p}
