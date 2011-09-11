@@ -15,9 +15,6 @@ import Control.Monad (unless)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe)
-import Data.Enumerator (run_, ($$))
-import Data.Enumerator.List (consume)
-import qualified Data.ByteString.Lazy as L
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -49,8 +46,7 @@ getUserFileR user ts = do
         Just enum -> do
             let ext = snd $ T.breakOnEnd "." t
             fh <- maybe notFound return $ findHandler ext fhs
-            lbs <- liftIO $ fmap L.fromChunks $ run_ $ enum $$ consume
-            defaultLayout $ fhWidget fh lbs
+            defaultLayout $ fhWidgetEnum enum fh
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do

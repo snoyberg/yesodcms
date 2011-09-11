@@ -10,8 +10,11 @@ import FormatHandler
 import FileStore
 import Data.Enumerator (($$), run_, enumList)
 import Data.Enumerator.List (consume)
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString as S
 import Data.Maybe (isJust)
+import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding (decodeUtf8With)
+import Data.Text.Encoding.Error (lenientDecode)
 
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
@@ -24,11 +27,11 @@ getEditPageR ts = do
     mcontents <- liftIO $
         case mecontents of
             Nothing -> return Nothing
-            Just econtents -> fmap (Just . L.fromChunks) $ run_ $ econtents $$ consume
+            Just econtents -> fmap (Just . decodeUtf8With lenientDecode . S.concat) $ run_ $ econtents $$ consume
     ((res, widget), enctype) <- runFormPost $ fhForm fh mcontents
     case res of
-        FormSuccess lbs -> do
-            liftIO $ fsPutFile fs t $ enumList 8 $ L.toChunks lbs
+        FormSuccess c -> do
+            liftIO $ fsPutFile fs t $ enumList 1 [encodeUtf8 c]
             setMessage "File contents updated"
         _ -> return ()
     let toView = isJust mcontents || isSucc res

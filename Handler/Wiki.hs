@@ -10,9 +10,7 @@ import qualified Data.Text as T
 import FormatHandler
 import FileStore
 import Data.Maybe (listToMaybe)
-import Data.Enumerator (run_, ($$), Enumerator)
-import Data.Enumerator.List (consume)
-import qualified Data.ByteString.Lazy as L
+import Data.Enumerator (Enumerator)
 import Data.ByteString (ByteString)
 
 getWikiR :: Texts -> Handler RepHtml
@@ -22,8 +20,7 @@ getWikiR pieces = do
     case file of
         Nothing -> defaultLayout $(widgetFile "create-wiki-page")
         Just (fh, ext, enum) -> do
-            lbs <- liftIO $ fmap L.fromChunks $ run_ $ enum $$ consume
-            let widget = fhWidget fh lbs
+            let widget = fhWidgetEnum enum fh
             defaultLayout $(widgetFile "show-wiki-page")
   where
     front ext = T.intercalate "/" $ pieces' ext
