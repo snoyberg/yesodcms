@@ -12,6 +12,7 @@ form :: UserId -> User -> Html -> Form Cms Cms (FormResult User, Widget)
 form uid user = renderTable $ User
     <$> pure (userEmail user)
     <*> areq (checkM unusedHandle textField) "Display name" (Just $ userHandle user)
+    <*> pure (userAdmin user)
   where
     unusedHandle handle = do
         mu <- runDB $ getBy $ UniqueHandle handle

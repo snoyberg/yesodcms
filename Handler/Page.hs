@@ -1,0 +1,36 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
+module Handler.Page
+    ( getPageR
+    , getPageR'
+    ) where
+
+import Foundation
+import qualified Data.Text as T
+import Handler.Wiki (findFile)
+import Data.Enumerator (run_, ($$))
+import Data.Enumerator.List (consume)
+import qualified Data.ByteString.Lazy as L
+import FormatHandler
+import Control.Monad (unless)
+import qualified Data.Set as Set
+import Data.Maybe (listToMaybe)
+
+getPageR :: T.Text -> [T.Text] -> Handler RepHtml
+getPageR x xs = getPageR' $ x:xs
+
+getPageR' :: [T.Text] -> Handler RepHtml
+getPageR' ts = do
+    mu <- maybeAuth
+    let canWrite = fmap (userAdmin . snd) mu == Just True
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    mfile <- liftIO $ findFile "page" ts fs fhs
+    case mfile of
+        Just (fh, ext, enum) -> do
+            lbs <- liftIO $ fmap L.fromChunks $ run_ $ enum $$ consume
+            let widget = fhWidget fh lbs
+            defaultLayout $(widgetFile "show-page")
+        Nothing -> do
+            unless canWrite notFound
+            defaultLayout $(widgetFile "create-wiki-page")
+  where
+    pieces' ext = "page" : ts ++ ["index." `T.append` ext]

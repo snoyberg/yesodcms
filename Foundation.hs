@@ -146,7 +146,7 @@ instance YesodAuth Cms where
             Just (uid, _) -> return $ Just uid
             Nothing -> do
                 handle <- getNextHandle 1
-                fmap Just $ insert $ User (credsIdent creds) handle
+                fmap Just $ insert $ User (credsIdent creds) handle False
       where
         getNextHandle i = do
             let h = "user-" `T.append` T.pack (show (i :: Int))
@@ -181,11 +181,15 @@ instance YesodJquery Cms where
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
+
     breadcrumb (WikiR []) = return ("Wiki", Just RootR)
     breadcrumb (WikiR x) = do
         let parent = init x
             this = last x
         return (this, Just $ WikiR parent)
+
+    breadcrumb (PageR x []) = return (x, Just RootR)
+    breadcrumb (PageR x ys) = return (last ys, Just $ PageR x $ init ys)
 
     breadcrumb (EditPageR page) = return ("Edit page: " `T.append` (T.intercalate "/" page), Just RootR)
     breadcrumb ProfileR = return ("Profile", Just RootR)

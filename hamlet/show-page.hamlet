@@ -1,0 +1,4 @@
+<article>^{widget}
+$if canWrite
+    <p>
+        <a href=@{EditPageR $ pieces' ext}>Edit this page

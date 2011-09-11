@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Wiki
     ( getWikiR
+    , findFile
     ) where
 
 import Foundation
@@ -9,14 +10,15 @@ import qualified Data.Text as T
 import FormatHandler
 import FileStore
 import Data.Maybe (listToMaybe)
-import Data.Enumerator (run_, ($$))
+import Data.Enumerator (run_, ($$), Enumerator)
 import Data.Enumerator.List (consume)
 import qualified Data.ByteString.Lazy as L
+import Data.ByteString (ByteString)
 
 getWikiR :: Texts -> Handler RepHtml
 getWikiR pieces = do
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
-    file <- liftIO $ findFile fs fhs
+    file <- liftIO $ findFile "wiki" pieces fs fhs
     case file of
         Nothing -> defaultLayout $(widgetFile "create-wiki-page")
         Just (fh, ext, enum) -> do
@@ -26,11 +28,16 @@ getWikiR pieces = do
   where
     front ext = T.intercalate "/" $ pieces' ext
     pieces' ext = "wiki" : pieces ++ ["index." `T.append` ext]
-    findFile _ [] = return Nothing
-    findFile fs (fh:fhs) = do
-        x <- findFile' fs fh (Set.toList $ fhExts fh)
-        maybe (findFile fs fhs) (return . Just) x
-    findFile' _ _ [] = return Nothing
-    findFile' fs fh (e:es) = do
+
+findFile :: T.Text -> [T.Text] -> FileStore -> [FormatHandler m] -> IO (Maybe (FormatHandler m, T.Text, Enumerator ByteString IO a))
+findFile _ _ _ [] = return Nothing
+findFile first pieces fs (fh:fhs) = do
+    x <- findFile' (Set.toList $ fhExts fh)
+    maybe (findFile first pieces fs fhs) (return . Just) x
+  where
+    front ext = T.intercalate "/" $ pieces' ext
+    pieces' ext = first : pieces ++ ["index." `T.append` ext]
+    findFile' [] = return Nothing
+    findFile' (e:es) = do
         x <- fsGetFile fs $ front e
-        maybe (findFile' fs fh es) (\y -> return $ Just (fh, e, y)) x
+        maybe (findFile' es) (\y -> return $ Just (fh, e, y)) x

@@ -40,14 +40,15 @@ getEditPageR ts = do
     safeLast _ x = last x
 
 routes :: [T.Text] -> [(T.Text, Route Cms)]
-routes ("wiki":rest) =
-    [("Wiki page", WikiR $ safeInit rest)]
-  where
-    safeInit [] = []
-    safeInit x = init x
-routes ("home":uid:rest) =
-    [("Home folder", UserFileIntR uid rest)]
+routes ("wiki":rest) = [("Wiki page", WikiR $ safeInit rest)]
+routes ("home":uid:rest) = [("Home folder", UserFileIntR uid rest)]
+routes ["page", _] = [("Homepage", RootR)]
+routes ("page":x:xs) = [("Static page", PageR x $ safeInit xs)]
 routes _ = []
+
+safeInit :: [a] -> [a]
+safeInit [] = []
+safeInit x = init x
 
 postEditPageR :: [T.Text] -> Handler RepHtml
 postEditPageR = getEditPageR
