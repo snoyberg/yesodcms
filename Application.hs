@@ -19,6 +19,9 @@ import Data.Dynamic (Dynamic, toDyn)
 import Network.Wai.Middleware.Debug (debugHandle)
 import FormatHandler
 import FileStore
+import Network.URI.Enumerator
+import qualified Network.URI.Enumerator.File as File
+import DITA.Util.ClassMap (loadClassMap)
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -56,7 +59,14 @@ withCms conf logger f = do
     s <- static Settings.staticDir
     Settings.withConnectionPool conf $ \p -> do
         runConnectionPool (runMigration migrateAll) p
-        let h = Cms conf logger s p [textFormatHandler, htmlFormatHandler, ditaFormatHandler] (simpleFileStore "data")
+        catalog <- File.decodeString "dita/catalog-dita.xml"
+        cm <- File.decodeString "dita/classmap.css"
+        classmap <- loadClassMap (toSchemeMap [File.fileScheme]) cm
+        let h = Cms conf logger s p
+                    [ textFormatHandler
+                    , htmlFormatHandler
+                    , ditaFormatHandler catalog classmap
+                    ] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()
 #else

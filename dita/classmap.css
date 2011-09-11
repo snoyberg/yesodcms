@@ -1,0 +1,81 @@
+sw-d/msgph { tag: span; class: msgph; }
+pr-d/option { tag: i; class: option; }
+topic/lines { tag: pre; class: lines; }
+topic/fn { tag: span; class: footnote; }
+ui-d/uicontrol { tag: span; class: uicontrol; }
+pr-d/parml { tag: dl; class: parml; }
+ui-d/shortcut { tag: b; class: shortcut; }
+pr-d/apiname { tag: dfn; class: apiname; }
+sw-d/filepath { tag: code; class: filepath; }
+topic/dthd { tag: dt; class: head; }
+topic/ddhd { tag: dd; class: head; }
+topic/figgroup { tag: section; class: figgroup; }
+ui-d/menucascade { tag: span; class: menucascade; }
+topic/example { tag: section; class: example; }
+pr-d/codeblock { tag: pre; class: codeblock; }
+topic/shortdesc { tag: div; class: shortdesc; }
+
+topic/p { tag: p; }
+task/cmd { tag: p; }
+topic/ol { tag: ol; }
+topic/ul { tag: ul; }
+topic/sl { tag: ul; }
+topic/li { tag: li; }
+topic/sli { tag: li; }
+task/steps { tag: ol; }
+task/step { tag: li; }
+task/substep { tag: li; }
+task/substeps { tag: ol; }
+task/steps-unordered { tag: ul; }
+hi-d/b { tag: b; }
+hi-d/i { tag: i; }
+hi-d/sup { tag: sup; }
+hi-d/sub { tag: sub; }
+pr-d/pt { tag: dt; }
+pr-d/pd { tag: dd; }
+topic/section { tag: section; }
+task/context { tag: section; }
+task/postreq { tag: section; }
+task/prereq { tag: section; }
+topic/title { tag: h1; }
+topic/thead { tag: thead; }
+topic/tbody { tag: tbody; }
+topic/row { tag: tr; }
+topic/entry { tag: td; }
+topic/dl { tag: dl; }
+topic/dt { tag: dt; }
+topic/dd { tag: dd; }
+sw-d/varname { tag: var; }
+topic/q { tag: q; }
+topic/cite { tag: cite; }
+sw-d/userinput { tag: kbd; }
+topic/lq { tag: blockquote; }
+topic/simpletable { tag: table; }
+topic/sthead { tag: thead; }
+topic/stentry { tag: td; }
+topic/strow { tag: tr; }
+topic/pre { tag: pre; }
+pr-d/codeph { tag: code; }
+topic/desc { tag: h2; }
+topic/term { tag: dfn; }
+
+topic/ph { display: stripped; }
+pr-d/plentry { display: stripped; }
+topic/keyword { display: stripped; }
+sw-d/cmdname { display: stripped; }
+topic/itemgroup { display: stripped; }
+task/tutorialinfo { display: stripped; }
+task/info { display: stripped; }
+task/stepresult { display: stripped; }
+topic/tgroup { display: stripped; }
+topic/dlentry { display: stripped; }
+topic/dlhead { display: stripped; }
+topic/body { display: stripped; }
+
+topic/colspec { display: deleted; }
+topic/indexterm { display: deleted; }
+topic/draft-comment { display: deleted; }
+topic/data { display: deleted; }
+
+/* FIXME We need better support for this */
+topic/related-links { display: deleted; }

@@ -9,7 +9,7 @@ import qualified Data.Text as T
 import Yesod.Form
 import Yesod.Form.Jquery
 import Yesod.Core
-import Text.Blaze (Html, preEscapedText)
+import Text.Blaze (Html, preEscapedText, toHtml)
 import Text.Lucius (lucius)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
@@ -23,7 +23,16 @@ import qualified Data.ByteString as S
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
-import Control.Monad (liftM)
+import Network.URI.Enumerator.File
+import Control.Monad (liftM, unless)
+import DITA.Parse (loadTopicTrees, runDITA_, topicTreesToDoc)
+import DITA.Output.HTML
+import DITA.Util.Render
+import DITA.Util.Naming
+import DITA.Util.ClassMap (ClassMap)
+import qualified Data.Map as Map
+import Text.XML
+import Text.XML.Xml2Html ()
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
@@ -92,16 +101,36 @@ findHandler e (fh:fhs)
     | e `Set.member` fhExts fh = Just fh
     | otherwise = findHandler e fhs
 
-ditaFormatHandler :: FormatHandler master
-ditaFormatHandler = FormatHandler
+ditaFormatHandler :: URI -- ^ catalog
+                  -> ClassMap
+                  -> FormatHandler master
+ditaFormatHandler catalog classmap = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
              . renderTable
              . areq textareaField "Content"
              . fmap Textarea
-    , fhWidget = \_sm _uri -> do
-        [whamlet|<h1>FIXME fhWidget of ditaFormatHandler|]
+    , fhWidget = \sm uri -> do
+        let sm' = Map.insert "file:" fileScheme sm
+        (title, nodes) <- liftIO $ runDITA_ catalog "dtd-flatten.jar" sm' $ do
+            -- FIXME we want to cache the results here somehow
+            tts <- loadTopicTrees uri
+            doc <- topicTreesToDoc uri tts
+            let ro = docToHtmlDocs def { hsClassMap = classmap } doc
+            let mdoc = fmap snd $ listToMaybe $ filter (\(x, _) -> x /= RelPath "index.html") $ Map.toList $ roDocs ro
+            let nodes = maybe [] (childrenOf "article" . documentRoot) mdoc
+            return (maybe T.empty (T.concat . concatMap text . childrenOf "title" . documentRoot) mdoc, nodes)
+        unless (T.null title) $ setTitle $ toHtml title
+        toWidget $ mapM_ toHtml nodes
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]
+    childrenOf name (Element n _ ns)
+        | name == n = ns
+        | otherwise = concatMap (go name) ns
+    go name (NodeElement e) = childrenOf name e
+    go _ _ = []
+    text (NodeElement (Element _ _ ns)) = concatMap text ns
+    text (NodeContent t) = [t]
+    text _ = []
