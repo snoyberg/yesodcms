@@ -1,0 +1,20 @@
+Default: &defaults
+  user: yesodcms
+  password: yesodcms
+  host: localhost
+  port: 5432
+  database: yesodcms
+
+Development:
+  <<: *defaults
+
+Test:
+  database: yesodcms_test
+  <<: *defaults
+
+Staging:
+  database: yesodcms_staging
+
+Production:
+  database: yesodcms_production
+  <<: *defaults
