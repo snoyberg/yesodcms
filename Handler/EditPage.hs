@@ -45,6 +45,8 @@ routes ("wiki":rest) =
   where
     safeInit [] = []
     safeInit x = init x
+routes ("home":uid:rest) =
+    [("Home folder", UserFileIntR uid rest)]
 routes _ = []
 
 postEditPageR :: [T.Text] -> Handler RepHtml

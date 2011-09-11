@@ -30,6 +30,7 @@ import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Handler.Root
 import Handler.Wiki
 import Handler.EditPage
+import Handler.UserFile
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see

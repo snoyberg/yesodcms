@@ -7,6 +7,7 @@ module Foundation
     , resourcesCms
     , Handler
     , Widget
+    , maybeAuthId
     , maybeAuth
     , requireAuth
     , module Yesod
@@ -140,11 +141,17 @@ instance YesodAuth Cms where
     logoutDest _ = RootR
 
     getAuthId creds = runDB $ do
-        x <- getBy $ UniqueUser $ credsIdent creds
+        x <- getBy $ UniqueEmail $ credsIdent creds
         case x of
             Just (uid, _) -> return $ Just uid
             Nothing -> do
-                fmap Just $ insert $ User $ credsIdent creds
+                handle <- getNextHandle 1
+                fmap Just $ insert $ User (credsIdent creds) handle
+      where
+        getNextHandle i = do
+            let h = "user-" `T.append` T.pack (show (i :: Int))
+            x <- getBy $ UniqueHandle h
+            maybe (return h) (const $ getNextHandle $ i + 1) x
 
     authPlugins = [authBrowserId']
 
@@ -182,7 +189,12 @@ instance YesodBreadcrumbs Cms where
 
     breadcrumb (EditPageR page) = return ("Edit page: " `T.append` (T.intercalate "/" page), Just RootR)
 
+    breadcrumb UsersR = return ("User list", Just RootR)
+    breadcrumb (UserFileR user []) = return (user, Just UsersR)
+    breadcrumb (UserFileR user x) = return (last x, Just $ UserFileR user $ init x)
+
     breadcrumb StaticR{} = return ("", Nothing)
     breadcrumb AuthR{} = return ("", Nothing)
     breadcrumb FaviconR{} = return ("", Nothing)
     breadcrumb RobotsR{} = return ("", Nothing)
+    breadcrumb UserFileIntR{} = return ("", Nothing)

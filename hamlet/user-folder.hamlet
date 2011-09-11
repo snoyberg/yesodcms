@@ -1,0 +1,28 @@
+<h2>Folders
+$if not $ null folders
+    <ul>
+        $forall f <- folders
+            <li>
+                <a href=@{link f}>#{f}
+$if canWrite
+    <form method=post>
+        <p>
+            Create a new folder named #
+            <input type=text name=folder>
+            <input type=submit value=Create>
+<h2>Files
+$if not $ null files
+    <ul>
+        $forall f <- files
+            <li>
+                <a href=@{link f}>#{f}
+$if canWrite
+    <form method=post>
+        <p>
+            Create a new file named #
+            <input type=text name=file>
+            \ as #
+            <select name=format>
+                $forall f <- formats
+                    <option value=#{show $ fst f}>#{snd f}
+            <input type=submit value=Create>

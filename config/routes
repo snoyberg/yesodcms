@@ -9,3 +9,7 @@
 /wiki/*Texts WikiR GET
 
 /edit/*Texts EditPageR GET POST
+
+/home UsersR GET
+/home/#Text/*Texts UserFileR GET POST
+/home-int/#Text/*Texts UserFileIntR GET
