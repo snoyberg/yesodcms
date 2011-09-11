@@ -56,7 +56,7 @@ withCms conf logger f = do
     s <- static Settings.staticDir
     Settings.withConnectionPool conf $ \p -> do
         runConnectionPool (runMigration migrateAll) p
-        let h = Cms conf logger s p [textFormatHandler, htmlFormatHandler] (simpleFileStore "data")
+        let h = Cms conf logger s p [textFormatHandler, htmlFormatHandler, ditaFormatHandler] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()
 #else

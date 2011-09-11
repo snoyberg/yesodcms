@@ -7,6 +7,7 @@ module Handler.Page
 import Foundation
 import qualified Data.Text as T
 import Handler.Wiki (findFile)
+import FileStore
 import FormatHandler
 import Control.Monad (unless)
 import qualified Data.Set as Set
@@ -23,7 +24,7 @@ getPageR' ts = do
     mfile <- liftIO $ findFile "page" ts fs fhs
     case mfile of
         Just (fh, ext, enum) -> do
-            let widget = fhWidgetEnum enum fh
+            let widget = fhWidget fh (fsSM fs) enum
             defaultLayout $(widgetFile "show-page")
         Nothing -> do
             unless canWrite notFound

@@ -10,8 +10,7 @@ import qualified Data.Text as T
 import FormatHandler
 import FileStore
 import Data.Maybe (listToMaybe)
-import Data.Enumerator (Enumerator)
-import Data.ByteString (ByteString)
+import Network.URI.Enumerator
 
 getWikiR :: Texts -> Handler RepHtml
 getWikiR pieces = do
@@ -19,14 +18,14 @@ getWikiR pieces = do
     file <- liftIO $ findFile "wiki" pieces fs fhs
     case file of
         Nothing -> defaultLayout $(widgetFile "create-wiki-page")
-        Just (fh, ext, enum) -> do
-            let widget = fhWidgetEnum enum fh
+        Just (fh, ext, uri) -> do
+            let widget = fhWidget fh (fsSM fs) uri
             defaultLayout $(widgetFile "show-wiki-page")
   where
     front ext = T.intercalate "/" $ pieces' ext
     pieces' ext = "wiki" : pieces ++ ["index." `T.append` ext]
 
-findFile :: T.Text -> [T.Text] -> FileStore -> [FormatHandler m] -> IO (Maybe (FormatHandler m, T.Text, Enumerator ByteString IO a))
+findFile :: T.Text -> [T.Text] -> FileStore -> [FormatHandler m] -> IO (Maybe (FormatHandler m, T.Text, URI))
 findFile _ _ _ [] = return Nothing
 findFile first pieces fs (fh:fhs) = do
     x <- findFile' (Set.toList $ fhExts fh)

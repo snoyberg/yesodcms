@@ -95,6 +95,7 @@ executable         yesodcms
                  , system-filepath
                  , system-fileio
                  , xss-sanitize
+                 , uri-enumerator       >= 0.0      && < 0.1
 
     if !os(windows)
          build-depends: unix

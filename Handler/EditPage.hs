@@ -15,6 +15,7 @@ import Data.Maybe (isJust)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
+import Network.URI.Enumerator
 
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
@@ -27,7 +28,7 @@ getEditPageR ts = do
     mcontents <- liftIO $
         case mecontents of
             Nothing -> return Nothing
-            Just econtents -> fmap (Just . decodeUtf8With lenientDecode . S.concat) $ run_ $ econtents $$ consume
+            Just uri -> fmap (Just . decodeUtf8With lenientDecode . S.concat) $ run_ $ readURI (fsSM fs) uri $$ consume
     ((res, widget), enctype) <- runFormPost $ fhForm fh mcontents
     case res of
         FormSuccess c -> do

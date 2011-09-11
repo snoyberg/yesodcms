@@ -17,23 +17,19 @@ import Text.Hamlet (shamlet)
 import Data.Maybe (listToMaybe)
 import Text.HTML.SanitizeXSS (sanitizeBalance)
 import Text.Julius (julius)
-import Data.ByteString (ByteString)
-import Data.Enumerator (Enumerator, ($$), run_)
+import Data.Enumerator (($$), run_)
 import Data.Enumerator.List (consume)
 import qualified Data.ByteString as S
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
-
-fhWidgetEnum :: Enumerator ByteString IO [ByteString] -> FormatHandler master -> GWidget sub master ()
-fhWidgetEnum enum fh = do
-    t <- liftIO $ fmap (decodeUtf8With lenientDecode . S.concat) $ run_ $ enum $$ consume
-    fhWidget fh t
+import Network.URI.Enumerator
+import Control.Monad (liftM)
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
     , fhName :: T.Text
     , fhForm :: forall sub. RenderMessage master FormMessage => Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())
-    , fhWidget :: forall sub. T.Text -> GWidget sub master ()
+    , fhWidget :: forall sub. SchemeMap IO -> URI -> GWidget sub master ()
     }
 
 type Ext = T.Text
@@ -46,20 +42,26 @@ textFormatHandler = FormatHandler
              . renderTable
              . areq textareaField "Content"
              . fmap Textarea
-    , fhWidget = \t -> do
+    , fhWidget = \sm uri -> do
         id' <- lift newIdent
+        t <- liftIO $ uriToText sm uri
         toWidget [lucius|##{id'} { white-space: pre }|]
         toWidget [shamlet|<div ##{id'}>#{t}|]
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]
 
+uriToText :: Monad m => SchemeMap m -> URI -> m T.Text
+uriToText sm uri = liftM (decodeUtf8With lenientDecode . S.concat) $ run_ $ readURI sm uri $$ consume
+
 htmlFormatHandler :: (YesodAloha master, YesodJquery master) => FormatHandler master
 htmlFormatHandler = FormatHandler
     { fhExts = Set.singleton "html"
     , fhName = "HTML"
     , fhForm = renderTable . areq alohaHtmlField "Content"
-    , fhWidget = toWidget . preEscapedText
+    , fhWidget = \sm uri -> do
+        t <- liftIO $ uriToText sm uri
+        toWidget $ preEscapedText t
     }
 
 class YesodAloha a where
@@ -89,3 +91,17 @@ findHandler _ [] = Nothing
 findHandler e (fh:fhs)
     | e `Set.member` fhExts fh = Just fh
     | otherwise = findHandler e fhs
+
+ditaFormatHandler :: FormatHandler master
+ditaFormatHandler = FormatHandler
+    { fhExts = Set.fromList ["xml", "dita"]
+    , fhName = "DITA Topic"
+    , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
+             . renderTable
+             . areq textareaField "Content"
+             . fmap Textarea
+    , fhWidget = \_sm _uri -> do
+        [whamlet|<h1>FIXME fhWidget of ditaFormatHandler|]
+    }
+  where
+    css = [lucius|textarea { width: 500px; height: 400px } |]

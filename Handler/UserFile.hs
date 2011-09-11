@@ -46,7 +46,7 @@ getUserFileR user ts = do
         Just enum -> do
             let ext = snd $ T.breakOnEnd "." t
             fh <- maybe notFound return $ findHandler ext fhs
-            defaultLayout $ fhWidgetEnum enum fh
+            defaultLayout $ fhWidget fh (fsSM fs) enum
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do

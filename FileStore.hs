@@ -1,4 +1,5 @@
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE OverloadedStrings #-}
 module FileStore where
 
 import Data.ByteString (ByteString)
@@ -9,14 +10,17 @@ import Prelude hiding (FilePath)
 import Filesystem.Path.CurrentOS
 import Filesystem
 import Control.Monad (forM)
+import Network.URI.Enumerator
+import qualified Data.Set as Set
 
 type FileStorePath = T.Text
 
 data FileStore = FileStore
-    { fsGetFile :: forall a. FileStorePath -> IO (Maybe (Enumerator ByteString IO a))
+    { fsGetFile :: FileStorePath -> IO (Maybe URI)
     , fsPutFile :: FileStorePath -> Enumerator ByteString IO () -> IO ()
     , fsList :: FileStorePath -> IO [(T.Text, Bool)] -- ^ is it a folder?
     , fsMkdir :: FileStorePath -> IO ()
+    , fsSM :: SchemeMap IO
     }
 
 simpleFileStore :: FilePath -> FileStore
@@ -25,7 +29,10 @@ simpleFileStore dir = FileStore
         let fp = dir </> fromText t
         e <- isFile fp
         if e
-            then return $ Just $ enumFile (encodeString fp)
+            then return $ Just nullURI
+                { uriScheme = "fs:"
+                , uriPath = t
+                }
             else return Nothing
     , fsPutFile = \t enum -> do
         let fp = dir </> fromText t
@@ -39,4 +46,9 @@ simpleFileStore dir = FileStore
             f <- isFile fp
             return (either id id $ toText $ filename fp, not f)
     , fsMkdir = createTree . (dir </>) . fromText
+    , fsSM = toSchemeMap $ return $ Scheme
+        { schemeNames = Set.singleton "fs:"
+        , schemeReader = Just $ enumFile . encodeString . (dir </>) . fromText . uriPath
+        , schemeWriter = Nothing
+        }
     }
