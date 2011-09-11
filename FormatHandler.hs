@@ -25,7 +25,7 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
 import Network.URI.Enumerator.File
 import Control.Monad (liftM, unless)
-import DITA.Parse (loadTopicTrees, runDITA_, topicTreesToDoc)
+import DITA.Parse (loadTopicTrees, runDITA, topicTreesToDoc)
 import DITA.Output.HTML
 import DITA.Util.Render
 import DITA.Util.Naming
@@ -33,6 +33,8 @@ import DITA.Util.ClassMap (ClassMap)
 import qualified Data.Map as Map
 import Text.XML
 import Text.XML.Xml2Html ()
+import qualified Data.Text.Lazy as TL
+import Control.Monad.Trans.State (evalState, get, put)
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
@@ -109,11 +111,11 @@ ditaFormatHandler catalog classmap = FormatHandler
     , fhName = "DITA Topic"
     , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
              . renderTable
-             . areq textareaField "Content"
+             . areq (check (fmap Textarea . validXML . unTextarea) textareaField) "Content"
              . fmap Textarea
     , fhWidget = \sm uri -> do
         let sm' = Map.insert "file:" fileScheme sm
-        (title, nodes) <- liftIO $ runDITA_ catalog "dtd-flatten.jar" sm' $ do
+        ex <- liftIO $ runDITA catalog "dtd-flatten.jar" sm' $ do
             -- FIXME we want to cache the results here somehow
             tts <- loadTopicTrees uri
             doc <- topicTreesToDoc uri tts
@@ -121,8 +123,11 @@ ditaFormatHandler catalog classmap = FormatHandler
             let mdoc = fmap snd $ listToMaybe $ filter (\(x, _) -> x /= RelPath "index.html") $ Map.toList $ roDocs ro
             let nodes = maybe [] (childrenOf "article" . documentRoot) mdoc
             return (maybe T.empty (T.concat . concatMap text . childrenOf "title" . documentRoot) mdoc, nodes)
-        unless (T.null title) $ setTitle $ toHtml title
-        toWidget $ mapM_ toHtml nodes
+        case ex of
+            Left{} -> toWidget [shamlet|<p>Invalid DITA content|]
+            Right (title, nodes) -> do
+                unless (T.null title) $ setTitle $ toHtml title
+                toWidget $ mapM_ toHtml nodes
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]
@@ -134,3 +139,45 @@ ditaFormatHandler catalog classmap = FormatHandler
     text (NodeElement (Element _ _ ns)) = concatMap text ns
     text (NodeContent t) = [t]
     text _ = []
+    validXML t =
+        case parseText def $ TL.fromChunks [t] of
+            Left{} -> Left ("Invalid XML" :: T.Text)
+            Right (Document a root b) -> Right $ TL.toStrict $ renderText def $ Document a (fixIds root) b
+    fixIds root = flip evalState (Set.empty, 1 :: Int) $ do
+        root' <- checkUnused root
+        addIds root'
+    checkUnused (Element e as ns) = do
+        as' <-
+            case lookup "id" as of
+                Nothing -> return as
+                Just id' -> do
+                    (used, i) <- get
+                    if id' `Set.member` used
+                        then return $ filter (\(x, _) -> x /= "id") as
+                        else put (Set.insert id' used, i) >> return as
+        ns' <- mapM checkUnused' ns
+        return $ Element e as' ns'
+    checkUnused' (NodeElement e) = fmap NodeElement $ checkUnused e
+    checkUnused' n = return n
+    addIds (Element e as ns) = do
+        as' <-
+            case lookup "id" as of
+                Just{} -> return as
+                Nothing -> do
+                    i <- nextId
+                    return $ ("id", i) : as
+        ns' <- mapM addIds' ns
+        return $ Element e as' ns'
+    addIds' (NodeElement e) = fmap NodeElement $ addIds e
+    addIds' n = return n
+    nextId = do
+        (used, i) <- get
+        let (id', i') = go' used i
+        put (Set.insert id' used, i')
+        return id'
+      where
+        go' used i =
+            let id' = "x-" `T.append` T.pack (show i)
+             in if id' `Set.member` used
+                    then go' used $ i + 1
+                    else (id', i)

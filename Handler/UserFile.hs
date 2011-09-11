@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import Data.Monoid (mempty)
 import FileStore
 import FormatHandler
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe)
@@ -32,7 +32,8 @@ getUserFileR user ts = do
     (uid, _) <- runDB $ getBy404 $ UniqueHandle user
     muid <- maybeAuthId
     let canWrite = Just uid == muid
-    let t = T.intercalate "/" $ "home" : toSinglePiece uid : ts
+    let ts' = "home" : toSinglePiece uid : ts
+    let t = T.intercalate "/" ts'
     Cms { fileStore = fs, formatHandlers = fhs } <- getYesod
     menum <- liftIO $ fsGetFile fs t
     case menum of
@@ -46,7 +47,12 @@ getUserFileR user ts = do
         Just enum -> do
             let ext = snd $ T.breakOnEnd "." t
             fh <- maybe notFound return $ findHandler ext fhs
-            defaultLayout $ fhWidget fh (fsSM fs) enum
+            defaultLayout $ do
+                fhWidget fh (fsSM fs) enum
+                when canWrite $ toWidget [hamlet|
+<p>
+    <a href=@{EditPageR ts'}>Edit
+|]
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do
