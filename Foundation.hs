@@ -17,6 +17,7 @@ module Foundation
     ) where
 
 import Yesod
+import Yesod.Form.Jquery
 import Yesod.Static (Static, base64md5, StaticRoute(..))
 import Settings.StaticFiles
 import Yesod.Auth
@@ -47,7 +48,7 @@ data Cms = Cms
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
-    , formatHandlers :: [FormatHandler]
+    , formatHandlers :: [FormatHandler Cms]
     , fileStore :: FileStore
     }
 
@@ -157,6 +158,19 @@ deliver y = logLazyText (getLogger y) . Data.Text.Lazy.Encoding.decodeUtf8
 
 instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage
+
+instance YesodAloha Cms where
+    urlAloha _ = Left $ StaticR aloha_aloha_js
+    urlAlohaPlugins _ = map (Left . StaticR)
+        [ aloha_plugins_com_gentics_aloha_plugins_Format_plugin_js
+        , aloha_plugins_com_gentics_aloha_plugins_Table_plugin_js
+        , aloha_plugins_com_gentics_aloha_plugins_List_plugin_js
+        , aloha_plugins_com_gentics_aloha_plugins_Link_plugin_js
+        , aloha_plugins_com_gentics_aloha_plugins_HighlightEditables_plugin_js
+        ]
+
+instance YesodJquery Cms where
+    urlJqueryJs _ = Left $ StaticR jquery_js
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
