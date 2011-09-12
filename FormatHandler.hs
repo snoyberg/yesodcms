@@ -25,10 +25,9 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
 import Network.URI.Enumerator.File
 import Control.Monad (liftM, unless)
-import DITA.Parse (loadTopicTrees, runDITA, topicTreesToDoc)
-import DITA.Output.HTML
+import DITA.Parse (loadTopicTrees, runDITA)
+import DITA.Output.HTML (renderTopicTree, hsClassMap)
 import DITA.Util.Render
-import DITA.Util.Naming
 import DITA.Util.ClassMap (ClassMap)
 import qualified Data.Map as Map
 import Text.XML
@@ -36,6 +35,8 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
+import DITA.Types (topicTitle, ttTopic)
+import DITA.Util (text)
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
@@ -119,11 +120,20 @@ ditaFormatHandler cache classmap = FormatHandler
         ex <- liftIO $ runDITA cache sm' $ do
             -- FIXME we want to cache the results here somehow
             tts <- loadTopicTrees uri
-            doc <- topicTreesToDoc uri tts
-            let ro = docToHtmlDocs def { hsClassMap = classmap } doc
-            let mdoc = fmap snd $ listToMaybe $ filter (\(x, _) -> x /= RelPath "index.html") $ Map.toList $ roDocs ro
-            let nodes = maybe [] (childrenOf "article" . documentRoot) mdoc
-            return (maybe T.empty (T.concat . concatMap text . childrenOf "title" . documentRoot) mdoc, nodes)
+            let ri topic = RenderInfo
+                    { riTopic = topic
+                    , riMisc = def { hsClassMap = classmap }
+                    , riParent = Nothing
+                    , riChildren = []
+                    , riRelTable = []
+                    , riGetLinkText = const "<Link text not enabled yet>"
+                    , riRenderNav = const Nothing
+                    , riRenderHref = const "FIXME: riRenderHref"
+                    }
+            let nodes = concatMap (renderTopicTree ri) tts
+            let title = maybe "" (text . topicTitle . ttTopic)
+                      $ listToMaybe tts
+            return (title, nodes)
         case ex of
             Left{} -> toWidget [shamlet|<p>Invalid DITA content|]
             Right (title, nodes) -> do
@@ -132,14 +142,6 @@ ditaFormatHandler cache classmap = FormatHandler
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]
-    childrenOf name (Element n _ ns)
-        | name == n = ns
-        | otherwise = concatMap (go name) ns
-    go name (NodeElement e) = childrenOf name e
-    go _ _ = []
-    text (NodeElement (Element _ _ ns)) = concatMap text ns
-    text (NodeContent t) = [t]
-    text _ = []
     validXML t =
         case parseText def $ TL.fromChunks [t] of
             Left{} -> Left ("Invalid XML" :: T.Text)
