@@ -103,6 +103,7 @@ executable         yesodcms
                  , xml2html
                  , xml-catalog          >= 0.1      && < 0.2
                  , http-types
+                 , xml-hamlet
 
     if !os(windows)
          build-depends: unix

@@ -49,3 +49,19 @@ form .errors {
     display: inline;
     padding-left: 0.5em;
 }
+nav#maptoc {
+    display: table-cell;
+    width: 200px;
+    padding-right: 10px;
+    background-color: #eee;
+}
+nav#maptoc ul {
+    padding-left: 20px;
+}
+nav#maptoc li {
+    margin: 0.5em 0 0 0;
+}
+article#mapcontent {
+    display: table-cell;
+    padding-left: 10px;
+}

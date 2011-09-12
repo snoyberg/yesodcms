@@ -73,6 +73,7 @@ withCms conf logger f = do
                     [ textFormatHandler
                     , htmlFormatHandler
                     , ditaFormatHandler renderHref cache classmap
+                    , ditamapFormatHandler renderHref cache classmap
                     ] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()

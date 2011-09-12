@@ -3,32 +3,34 @@
 {-# LANGUAGE QuasiQuotes #-}
 module FormatHandler.DITA
     ( ditaFormatHandler
+    , ditamapFormatHandler
     ) where
 
 import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
-import DITA.Parse (loadTopicTrees, runDITA)
+import DITA.Parse (loadTopicTrees, runDITA, loadDoc)
 import DITA.Output.HTML (renderTopicTree, hsClassMap)
 import DITA.Util.Render
 import DITA.Util.ClassMap (ClassMap)
-import qualified Data.Map as Map
 import Text.XML
 import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic, Href)
+import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..))
 import DITA.Util (text)
 import Control.Monad (unless)
-import Network.URI.Enumerator.File
 import Yesod.Core
 import Yesod.Form
 import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.IO.Class (liftIO)
-import Data.Maybe (listToMaybe)
+import Control.Monad.Trans.Class (lift)
+import Data.Maybe (listToMaybe, fromMaybe)
 import Text.Blaze (toHtml, Html)
+import Text.Hamlet.XML (xml)
+import qualified Data.Map as Map
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -39,8 +41,7 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
     , fhName = "DITA Topic"
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
-        let sm' = Map.insert "file:" fileScheme sm
-        ex <- liftIO $ runDITA cache sm' $ do
+        ex <- liftIO $ runDITA cache sm $ do
             -- FIXME we want to cache the results here somehow
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
@@ -58,11 +59,70 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
                       $ listToMaybe tts
             return (title, nodes)
         case ex of
-            Left{} -> toWidget [shamlet|<p>Invalid DITA content|]
+            Left e -> toWidget [shamlet|<p>Invalid DITA content: #{show e}|]
             Right (title, nodes) -> do
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
     }
+
+ditamapFormatHandler :: RenderMessage master FormMessage
+                     => (Href -> T.Text)
+                     -> C.DTDCache IO
+                     -> ClassMap
+                     -> FormatHandler master
+ditamapFormatHandler renderHref' cache classmap = FormatHandler
+    { fhExts = Set.fromList ["ditamap"]
+    , fhName = "DITA Map"
+    , fhForm = xmlForm "Content"
+    , fhWidget = \sm uri -> do
+        mnavid <- lift $ runInputGet $ iopt textField "nav"
+        -- FIXME some selection based on query-string parameters
+        ex <- liftIO $ runDITA cache sm $ do
+            let ri topic = RenderInfo
+                    { riTopic = topic
+                    , riMisc = def { hsClassMap = classmap }
+                    , riParent = Nothing
+                    , riChildren = []
+                    , riRelTable = []
+                    , riGetLinkText = const "<Link text not enabled yet>"
+                    , riRenderNav = const Nothing
+                    , riRenderHref = renderHref'
+                    }
+            -- FIXME caching is important, m'kay?
+            doc <- loadDoc uri
+            let (mtitle, mnav) =
+                    case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
+                        Nothing -> (Nothing, Nothing)
+                        Just nav -> (Just $ navTitle nav, Just nav)
+            liftIO $ Prelude.writeFile "test" $ show mnav
+            return (fromMaybe (docTitle doc) mtitle, wrapper (showNavs (docNavs doc)) (maybe [] (showNav ri) mnav))
+        case ex of
+            Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
+            Right (title, nodes) -> do
+                unless (T.null title) $ setTitle $ toHtml title
+                toWidget $ mapM_ toHtml nodes
+    }
+  where
+    wrapper toc content = [xml|
+<nav id=maptoc>
+    ^{toc}
+<article id=mapcontent>
+    ^{content}
+|]
+    showNavs [] = []
+    showNavs navs = [xml|
+<ul>
+    $forall nav <- navs
+        <li>
+            $maybe ntt <- navTopicTree nav
+                <a href="?nav=#{unNavId $ fst ntt}">
+                    \#{navTitle nav}
+            $nothing
+                \#{navTitle nav}
+            ^{showNavs $ navChildren nav}
+|]
+    showNav ri Nav { navTopicTree = Just (_, tt) } = renderTopicTree ri tt
+    showNav _ _ = []
 
 xmlForm :: (RenderMessage master FormMessage, RenderMessage master msg)
         => FieldSettings msg -> Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())
