@@ -17,7 +17,9 @@ import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
 import Data.Dynamic (Dynamic, toDyn)
 import Network.Wai.Middleware.Debug (debugHandle)
-import FormatHandler
+import FormatHandler.Html
+import FormatHandler.Text
+import FormatHandler.DITA
 import FileStore
 import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File

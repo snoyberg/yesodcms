@@ -36,6 +36,9 @@ library
                      Settings
                      Settings.StaticFiles
                      FormatHandler
+                     FormatHandler.Text
+                     FormatHandler.Html
+                     FormatHandler.DITA
                      FileStore
                      Handler.Root
                      Handler.Wiki

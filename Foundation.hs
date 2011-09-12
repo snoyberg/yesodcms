@@ -38,6 +38,7 @@ import Web.ClientSession (getKey)
 import Data.Text (Text)
 import Data.Monoid (mempty)
 import FormatHandler
+import FormatHandler.Html
 import FileStore
 
 -- | The site argument for your application. This can be a good place to
