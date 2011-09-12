@@ -27,6 +27,7 @@ import DITA.Util.ClassMap (loadClassMap)
 import qualified Text.XML.Catalog as C
 import DITA.Types (hrefFile)
 import qualified Data.Map as Map
+import Data.IORef
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -75,12 +76,13 @@ withCms conf logger f = do
                 , ("jpg", "image/jpeg")
                 , ("jpeg", "image/jpeg")
                 ]
+        idocCache <- newIORef Map.empty
         let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
             h = Cms conf logger s p
                     [ textFormatHandler
                     , htmlFormatHandler
                     , ditaFormatHandler renderHref cache classmap
-                    , ditamapFormatHandler renderHref cache classmap
+                    , ditamapFormatHandler renderHref cache classmap idocCache
                     ] (simpleFileStore "data") raw
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()

@@ -35,6 +35,9 @@ import Data.Enumerator (Enumerator)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as L
 import qualified DITA.Types as D
+import Data.IORef
+import Network.URI.Enumerator (URI)
+import Data.Time
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -46,7 +49,6 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
         ex <- liftIO $ runDITA cache sm $ do
-            -- FIXME we want to cache the results here somehow
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
                     { riTopic = topic
@@ -77,14 +79,14 @@ ditamapFormatHandler :: RenderMessage master FormMessage
                      => (Href -> T.Text)
                      -> C.DTDCache IO
                      -> ClassMap
+                     -> IORef (Map.Map URI (UTCTime, Doc))
                      -> FormatHandler master
-ditamapFormatHandler renderHref' cache classmap = FormatHandler
+ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
         mnavid <- lift $ runInputGet $ iopt textField "nav"
-        -- FIXME some selection based on query-string parameters
         ex <- liftIO $ runDITA cache sm $ do
             let ri topic = RenderInfo
                     { riTopic = topic
@@ -99,8 +101,22 @@ ditamapFormatHandler renderHref' cache classmap = FormatHandler
                     , riRenderNav = const Nothing
                     , riRenderHref = renderHref'
                     }
-            -- FIXME caching is important, m'kay?
-            doc <- loadDoc uri
+            docCache <- liftIO $ readIORef idocCache
+            mdoc <-
+                case Map.lookup uri docCache of
+                    Nothing -> return Nothing
+                    Just (toUpdate, doc) -> do
+                        now <- liftIO getCurrentTime
+                        return $ if now > toUpdate then Nothing else Just doc
+            doc <-
+                case mdoc of
+                    Nothing -> do
+                        doc <- loadDoc uri
+                        now <- liftIO getCurrentTime
+                        let toUpdate = addUTCTime (60 * 5) now
+                        liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri (toUpdate, doc) m, ()))
+                        return doc
+                    Just doc -> return doc
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
                 Nothing -> (docTitle doc, wrapper Nothing (showNavs (docNavs doc)) [])
                 Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs (docNavs doc)) (showNav ri nav))

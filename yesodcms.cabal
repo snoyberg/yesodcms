@@ -106,6 +106,7 @@ executable         yesodcms
                  , xml-hamlet
                  , spoon
                  , zip-archive
+                 , time
 
     if !os(windows)
          build-depends: unix
