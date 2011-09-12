@@ -31,7 +31,6 @@ import Database.Persist.GenericSql
 import Settings (hamletFile, cassiusFile, luciusFile, juliusFile, widgetFile)
 import Model
 import Control.Monad (unless)
-import qualified Data.Text.Lazy.Encoding
 import Text.Jasmine (minifym)
 import qualified Data.Text as T
 import Web.ClientSession (getKey)
@@ -157,14 +156,6 @@ instance YesodAuth Cms where
             maybe (return h) (const $ getNextHandle $ i + 1) x
 
     authPlugins = [authBrowserId']
-
--- Sends off your mail. Requires sendmail in production!
-deliver :: Cms -> L.ByteString -> IO ()
-#ifdef PRODUCTION
-deliver _ = sendmail
-#else
-deliver y = logLazyText (getLogger y) . Data.Text.Lazy.Encoding.decodeUtf8
-#endif
 
 instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage
