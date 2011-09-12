@@ -98,6 +98,7 @@ executable         yesodcms
                  , dita
                  , xml-enumerator       >= 0.4.2    && < 0.5
                  , xml2html
+                 , xml-catalog          >= 0.1      && < 0.2
 
     if !os(windows)
          build-depends: unix

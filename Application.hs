@@ -22,6 +22,7 @@ import FileStore
 import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
+import qualified Text.XML.Catalog as C
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -61,11 +62,13 @@ withCms conf logger f = do
         runConnectionPool (runMigration migrateAll) p
         catalog <- File.decodeString "dita/catalog-dita.xml"
         cm <- File.decodeString "dita/classmap.css"
-        classmap <- loadClassMap (toSchemeMap [File.fileScheme]) cm
+        let sm = toSchemeMap [File.fileScheme]
+        classmap <- loadClassMap sm cm
+        cache <- C.loadCatalog sm catalog >>= flip (C.newDTDCache "dtd-flatten.jar") sm
         let h = Cms conf logger s p
                     [ textFormatHandler
                     , htmlFormatHandler
-                    , ditaFormatHandler catalog classmap
+                    , ditaFormatHandler cache classmap
                     ] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()

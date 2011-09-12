@@ -35,6 +35,7 @@ import Text.XML
 import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
+import qualified Text.XML.Catalog as C
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
@@ -103,10 +104,10 @@ findHandler e (fh:fhs)
     | e `Set.member` fhExts fh = Just fh
     | otherwise = findHandler e fhs
 
-ditaFormatHandler :: URI -- ^ catalog
+ditaFormatHandler :: C.DTDCache IO
                   -> ClassMap
                   -> FormatHandler master
-ditaFormatHandler catalog classmap = FormatHandler
+ditaFormatHandler cache classmap = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
@@ -115,7 +116,7 @@ ditaFormatHandler catalog classmap = FormatHandler
              . fmap Textarea
     , fhWidget = \sm uri -> do
         let sm' = Map.insert "file:" fileScheme sm
-        ex <- liftIO $ runDITA catalog "dtd-flatten.jar" sm' $ do
+        ex <- liftIO $ runDITA cache sm' $ do
             -- FIXME we want to cache the results here somehow
             tts <- loadTopicTrees uri
             doc <- topicTreesToDoc uri tts
