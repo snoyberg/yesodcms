@@ -104,6 +104,8 @@ executable         yesodcms
                  , xml-catalog          >= 0.1      && < 0.2
                  , http-types
                  , xml-hamlet
+                 , spoon
+                 , zip-archive
 
     if !os(windows)
          build-depends: unix

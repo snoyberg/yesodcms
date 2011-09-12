@@ -27,10 +27,13 @@ import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
-import Data.Maybe (listToMaybe, fromMaybe)
+import Data.Maybe (listToMaybe)
 import Text.Blaze (toHtml, Html)
 import Text.Hamlet.XML (xml)
 import qualified Data.Map as Map
+import Data.Enumerator (Enumerator)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as L
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -63,6 +66,7 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
             Right (title, nodes) -> do
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
+    , fhFilter = xmlFilter
     }
 
 ditamapFormatHandler :: RenderMessage master FormMessage
@@ -90,22 +94,23 @@ ditamapFormatHandler renderHref' cache classmap = FormatHandler
                     }
             -- FIXME caching is important, m'kay?
             doc <- loadDoc uri
-            let (mtitle, mnav) =
-                    case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
-                        Nothing -> (Nothing, Nothing)
-                        Just nav -> (Just $ navTitle nav, Just nav)
-            return (fromMaybe (docTitle doc) mtitle, wrapper (showNavs (docNavs doc)) (maybe [] (showNav ri) mnav))
+            return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
+                Nothing -> (docTitle doc, wrapper Nothing (showNavs (docNavs doc)) [])
+                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs (docNavs doc)) (showNav ri nav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
             Right (title, nodes) -> do
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
+    , fhFilter = xmlFilter
     }
   where
-    wrapper toc content = [xml|
+    wrapper mtitle toc content = [xml|
 <nav id=maptoc>
     ^{toc}
 <article id=mapcontent>
+    $maybe title <- mtitle
+        <h1>#{title}
     ^{content}
 |]
     showNavs [] = []
@@ -180,3 +185,9 @@ fixIds root = flip evalState (Set.empty, 1 :: Int) $ do
              in if id' `Set.member` used
                     then go' used $ i + 1
                     else (id', i)
+
+xmlFilter :: L.ByteString -> Maybe (Enumerator ByteString IO a)
+xmlFilter lbs =
+    case parseLBS def lbs of
+        Left{} -> Nothing
+        Right (Document a root b) -> Just $ renderBytes def $ Document a (fixIds root) b

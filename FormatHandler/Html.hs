@@ -9,6 +9,7 @@ import FormatHandler
 import Text.Julius (julius)
 import Text.HTML.SanitizeXSS (sanitizeBalance)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import Yesod.Core
 import Yesod.Form
 import Yesod.Form.Jquery
@@ -19,6 +20,10 @@ import Text.Hamlet (shamlet)
 import Data.Maybe (listToMaybe)
 import Text.Blaze (preEscapedText)
 import qualified Data.Set as Set
+import qualified Data.Text.Lazy.Encoding as TLE
+import Data.Text.Encoding.Error (lenientDecode)
+import qualified Data.ByteString.Lazy as L
+import Data.Enumerator (enumList)
 
 htmlFormatHandler :: (YesodAloha master, YesodJquery master) => FormatHandler master
 htmlFormatHandler = FormatHandler
@@ -28,6 +33,7 @@ htmlFormatHandler = FormatHandler
     , fhWidget = \sm uri -> do
         t <- liftIO $ uriToText sm uri
         toWidget $ preEscapedText t
+    , fhFilter = Just . enumList 8 . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
     }
 
 class YesodAloha a where

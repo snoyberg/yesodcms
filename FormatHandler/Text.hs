@@ -12,6 +12,8 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.Trans.Class (lift)
+import qualified Data.ByteString.Lazy as L
+import Data.Enumerator (enumList)
 
 textFormatHandler :: FormatHandler master
 textFormatHandler = FormatHandler
@@ -26,6 +28,7 @@ textFormatHandler = FormatHandler
         t <- liftIO $ uriToText sm uri
         toWidget [lucius|##{id'} { white-space: pre }|]
         toWidget [shamlet|<div ##{id'}>#{t}|]
+    , fhFilter = Just . enumList 8 . L.toChunks
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]

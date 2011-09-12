@@ -26,3 +26,11 @@ $if canWrite
                 $forall f <- formats
                     <option value=#{show $ fst f}>#{snd f}
             <input type=submit value=Create>
+
+    <h2>ZIP File Upload
+    <form method=post enctype=#{Multipart}>
+        <p>
+            Upload ZIP file contents to the current folder: #
+            <input type=file name=zip>
+            \ #
+            <input type=submit value=Upload>
