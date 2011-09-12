@@ -10,7 +10,7 @@ import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
 import DITA.Parse (loadTopicTrees, runDITA, loadDoc)
-import DITA.Output.HTML (renderTopicTree, hsClassMap)
+import DITA.Output.HTML (renderTopicTree, hsClassMap, hsGoElem, HtmlSettings)
 import DITA.Util.Render
 import DITA.Util.ClassMap (ClassMap)
 import Text.XML
@@ -18,7 +18,7 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..))
+import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..))
 import DITA.Util (text)
 import Control.Monad (unless)
 import Yesod.Core
@@ -34,6 +34,7 @@ import qualified Data.Map as Map
 import Data.Enumerator (Enumerator)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as L
+import qualified DITA.Types as D
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -49,7 +50,10 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
                     { riTopic = topic
-                    , riMisc = def { hsClassMap = classmap }
+                    , riMisc = def
+                        { hsClassMap = classmap
+                        , hsGoElem = goElem
+                        }
                     , riParent = Nothing
                     , riChildren = []
                     , riRelTable = []
@@ -84,7 +88,10 @@ ditamapFormatHandler renderHref' cache classmap = FormatHandler
         ex <- liftIO $ runDITA cache sm $ do
             let ri topic = RenderInfo
                     { riTopic = topic
-                    , riMisc = def { hsClassMap = classmap }
+                    , riMisc = def
+                        { hsClassMap = classmap
+                        , hsGoElem = goElem
+                        }
                     , riParent = Nothing
                     , riChildren = []
                     , riRelTable = []
@@ -191,3 +198,6 @@ xmlFilter lbs =
     case parseLBS def lbs of
         Left{} -> Nothing
         Right (Document a root b) -> Just $ renderBytes def $ Document a (fixIds root) b
+
+goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
+goElem _ _ _ = Nothing
