@@ -28,7 +28,7 @@ import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (listToMaybe)
-import Text.Blaze (toHtml)
+import Text.Blaze (toHtml, Html)
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -37,10 +37,7 @@ ditaFormatHandler :: (Href -> T.Text)
 ditaFormatHandler renderHref' cache classmap = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
-    , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
-             . renderTable
-             . areq (check (fmap Textarea . validXML . unTextarea) textareaField) "Content"
-             . fmap Textarea
+    , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
         let sm' = Map.insert "file:" fileScheme sm
         ex <- liftIO $ runDITA cache sm' $ do
@@ -66,15 +63,29 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
     }
+
+xmlForm :: (RenderMessage master FormMessage, RenderMessage master msg)
+        => FieldSettings msg -> Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())
+xmlForm fs =
+      (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
+    . renderTable
+    . areq (check (fmap Textarea . validXML . unTextarea) textareaField) fs
+    . fmap Textarea
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]
-    validXML t =
-        case parseText def $ TL.fromChunks [t] of
-            Left{} -> Left ("Invalid XML" :: T.Text)
-            Right (Document a root b) -> Right $ TL.toStrict $ renderText def $ Document a (fixIds root) b
-    fixIds root = flip evalState (Set.empty, 1 :: Int) $ do
-        root' <- checkUnused root
-        addIds root'
+
+
+validXML :: T.Text -> Either T.Text T.Text
+validXML t =
+    case parseText def $ TL.fromChunks [t] of
+        Left{} -> Left "Invalid XML"
+        Right (Document a root b) -> Right $ TL.toStrict $ renderText def $ Document a (fixIds root) b
+
+fixIds :: Element -> Element
+fixIds root = flip evalState (Set.empty, 1 :: Int) $ do
+    root' <- checkUnused root
+    addIds root'
+  where
     checkUnused (Element e as ns) = do
         as' <-
             case lookup "id" as of
