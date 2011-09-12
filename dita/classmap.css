@@ -14,6 +14,7 @@ ui-d/menucascade { tag: span; class: menucascade; }
 topic/example { tag: section; class: example; }
 pr-d/codeblock { tag: pre; class: codeblock; }
 topic/shortdesc { tag: div; class: shortdesc; }
+topic/note { tag: aside; class: note; }
 
 topic/p { tag: p; }
 task/cmd { tag: p; }
