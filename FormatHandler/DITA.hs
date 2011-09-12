@@ -94,7 +94,6 @@ ditamapFormatHandler renderHref' cache classmap = FormatHandler
                     case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
                         Nothing -> (Nothing, Nothing)
                         Just nav -> (Just $ navTitle nav, Just nav)
-            liftIO $ Prelude.writeFile "test" $ show mnav
             return (fromMaybe (docTitle doc) mtitle, wrapper (showNavs (docNavs doc)) (maybe [] (showNav ri) mnav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]

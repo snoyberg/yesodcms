@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings, NamedFieldPuns #-}
 module Handler.UserFile
     ( getUsersR
     , getUserFileIntR
@@ -19,6 +19,11 @@ import Data.Maybe (listToMaybe)
 import Handler.EditPage (routes)
 import Network.HTTP.Types (decodePathSegments)
 import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Map as Map
+import Data.Enumerator (($=))
+import qualified Data.Enumerator.List as EL
+import Blaze.ByteString.Builder (fromByteString)
+import Network.URI.Enumerator (readURI)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -38,7 +43,7 @@ getUserFileR user ts = do
     let canWrite = Just uid == muid
     let ts' = "home" : toSinglePiece uid : ts
     let t = T.intercalate "/" ts'
-    Cms { fileStore = fs, formatHandlers = fhs } <- getYesod
+    Cms { fileStore = fs, formatHandlers = fhs, rawFiles } <- getYesod
     menum <- liftIO $ fsGetFile fs t
     case menum of
         Nothing -> do
@@ -50,10 +55,14 @@ getUserFileR user ts = do
             defaultLayout $(widgetFile "user-folder")
         Just enum -> do
             let ext = snd $ T.breakOnEnd "." t
-            fh <- maybe notFound return $ findHandler ext fhs
-            defaultLayout $ do
-                fhWidget fh (fsSM fs) enum
-                when canWrite $ toWidget [hamlet|
+            case Map.lookup ext $ rawFiles of
+                -- FIXME re-enable sendfile optimization
+                Just mime -> sendResponse (mime, ContentEnum (readURI (fsSM fs) enum $= EL.map fromByteString))
+                Nothing -> do
+                    fh <- maybe notFound return $ findHandler ext fhs
+                    defaultLayout $ do
+                        fhWidget fh (fsSM fs) enum
+                        when canWrite $ toWidget [hamlet|
 <p>
     <a href=@{EditPageR ts'}>Edit
 |]

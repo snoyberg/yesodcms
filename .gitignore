@@ -3,3 +3,5 @@ config/client_session_key.aes
 *.swp
 /static/tmp/
 /data/
+*.hi
+*.o

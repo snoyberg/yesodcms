@@ -40,6 +40,7 @@ import Data.Monoid (mempty)
 import FormatHandler
 import FormatHandler.Html
 import FileStore
+import Data.Map (Map)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -52,6 +53,7 @@ data Cms = Cms
     , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
     , formatHandlers :: [FormatHandler Cms]
     , fileStore :: FileStore
+    , rawFiles :: Map T.Text ContentType
     }
 
 mkMessage "Cms" "messages" "en"
