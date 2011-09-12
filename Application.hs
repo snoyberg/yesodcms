@@ -23,6 +23,7 @@ import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
 import qualified Text.XML.Catalog as C
+import DITA.Types (hrefFile)
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -65,10 +66,11 @@ withCms conf logger f = do
         let sm = toSchemeMap [File.fileScheme]
         classmap <- loadClassMap sm cm
         cache <- C.loadCatalog sm catalog >>= flip (C.newDTDCache "dtd-flatten.jar") sm
-        let h = Cms conf logger s p
+        let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
+            h = Cms conf logger s p
                     [ textFormatHandler
                     , htmlFormatHandler
-                    , ditaFormatHandler cache classmap
+                    , ditaFormatHandler renderHref cache classmap
                     ] (simpleFileStore "data")
 #ifdef WINDOWS
         toWaiApp h >>= f >> return ()

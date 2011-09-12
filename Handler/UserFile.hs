@@ -4,6 +4,7 @@ module Handler.UserFile
     , getUserFileIntR
     , getUserFileR
     , postUserFileR
+    , getRedirectorR
     ) where
 
 import Foundation
@@ -15,6 +16,9 @@ import Control.Monad (unless, when)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe)
+import Handler.EditPage (routes)
+import Network.HTTP.Types (decodePathSegments)
+import Data.Text.Encoding (encodeUtf8)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -79,3 +83,9 @@ postUserFileR user ts = do
     atMay _ [] = Nothing
     atMay 0 (x:_) = Just x
     atMay i (_:xs) = atMay (i - 1) xs
+
+getRedirectorR :: T.Text -> Handler ()
+getRedirectorR t =
+    case routes $ decodePathSegments $ encodeUtf8 t of
+        [] -> notFound
+        (_, r):_ -> redirect RedirectPermanent r

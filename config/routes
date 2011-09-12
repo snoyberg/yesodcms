@@ -16,3 +16,5 @@
 /home-int/#Text/*Texts UserFileIntR GET
 
 /profile ProfileR GET POST
+
+/redirector/#Text RedirectorR GET

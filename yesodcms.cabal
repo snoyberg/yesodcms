@@ -99,6 +99,7 @@ executable         yesodcms
                  , xml-enumerator       >= 0.4.2    && < 0.5
                  , xml2html
                  , xml-catalog          >= 0.1      && < 0.2
+                 , http-types
 
     if !os(windows)
          build-depends: unix

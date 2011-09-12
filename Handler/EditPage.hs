@@ -2,6 +2,7 @@
 module Handler.EditPage
     ( getEditPageR
     , postEditPageR
+    , routes
     ) where
 
 import Foundation

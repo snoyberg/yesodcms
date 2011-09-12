@@ -203,3 +203,4 @@ instance YesodBreadcrumbs Cms where
     breadcrumb FaviconR{} = return ("", Nothing)
     breadcrumb RobotsR{} = return ("", Nothing)
     breadcrumb UserFileIntR{} = return ("", Nothing)
+    breadcrumb RedirectorR{} = return ("", Nothing)

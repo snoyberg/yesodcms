@@ -35,7 +35,7 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic)
+import DITA.Types (topicTitle, ttTopic, Href)
 import DITA.Util (text)
 
 data FormatHandler master = FormatHandler
@@ -105,10 +105,11 @@ findHandler e (fh:fhs)
     | e `Set.member` fhExts fh = Just fh
     | otherwise = findHandler e fhs
 
-ditaFormatHandler :: C.DTDCache IO
+ditaFormatHandler :: (Href -> T.Text)
+                  -> C.DTDCache IO
                   -> ClassMap
                   -> FormatHandler master
-ditaFormatHandler cache classmap = FormatHandler
+ditaFormatHandler renderHref' cache classmap = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
@@ -128,7 +129,7 @@ ditaFormatHandler cache classmap = FormatHandler
                     , riRelTable = []
                     , riGetLinkText = const "<Link text not enabled yet>"
                     , riRenderNav = const Nothing
-                    , riRenderHref = const "FIXME: riRenderHref"
+                    , riRenderHref = renderHref'
                     }
             let nodes = concatMap (renderTopicTree ri) tts
             let title = maybe "" (text . topicTitle . ttTopic)
