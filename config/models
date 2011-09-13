@@ -9,3 +9,6 @@ CanonPath
     refered FileStorePath
     redirect Text
     deriving
+FileName
+    uri Text
+    UniqueFileName uri

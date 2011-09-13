@@ -25,7 +25,7 @@ import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
 import qualified Text.XML.Catalog as C
-import DITA.Types (hrefFile, NavId (..))
+import DITA.Types (hrefFile, NavId (..), FileId (..))
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W
@@ -87,8 +87,8 @@ withCms conf logger f = do
             h = Cms conf logger s p
                     [ textFormatHandler
                     , htmlFormatHandler
-                    , ditaFormatHandler renderHref cache classmap
-                    , ditamapFormatHandler renderHref cache classmap idocCache toNavRoute
+                    , ditaFormatHandler renderHref cache classmap (loadFileId p)
+                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toNavRoute
                     ] (simpleFileStore "data") raw
 #ifdef WINDOWS
         toWaiApp h >>= f . book >> return ()
@@ -138,3 +138,9 @@ withDevelAppPort =
 
 toNavRoute :: URI -> NavId -> (CmsRoute, [(T.Text, T.Text)])
 toNavRoute uri (NavId nid) = (RedirectorR (uriPath uri), [("nav", nid)])
+
+loadFileId :: Settings.ConnectionPool -> URI -> IO FileId
+loadFileId p uri = flip Settings.runConnectionPool p $ do
+    let str = T.pack $ show $ toNetworkURI uri
+    fid <- fmap (either fst id) $ insertBy $ FileName str
+    return $ FileId $ "file" `T.append` toSinglePiece fid

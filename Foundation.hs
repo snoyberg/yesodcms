@@ -93,10 +93,12 @@ instance Yesod Cms where
         mmsg <- getMessage
         mu <- maybeAuth
         (title', parents) <- breadcrumbs
+        y <- getYesod
         pc <- widgetToPageContent $ do
             setTitle $ toHtml title'
             $(widgetFile "top-bar")
             widget
+            addScriptEither $ urlJqueryJs y
         hamletToRepHtml $(hamletFile "default-layout")
 
     -- This is done to provide an optimization for serving static files from

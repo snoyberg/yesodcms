@@ -42,13 +42,14 @@ import Data.Time
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
                   -> ClassMap
+                  -> (URI -> IO D.FileId)
                   -> FormatHandler master
-ditaFormatHandler renderHref' cache classmap = FormatHandler
+ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
-        ex <- liftIO $ runDITA cache sm $ do
+        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
                     { riTopic = topic
@@ -80,10 +81,11 @@ ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      => (Href -> T.Text)
                      -> C.DTDCache IO
                      -> ClassMap
+                     -> (URI -> IO D.FileId)
                      -> IORef (Map.Map URI (UTCTime, Doc))
                      -> (URI -> NavId -> (Route master, [(T.Text, T.Text)]))
                      -> FormatHandler master
-ditamapFormatHandler renderHref' cache classmap idocCache toNavRoute = FormatHandler
+ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
@@ -95,7 +97,7 @@ ditamapFormatHandler renderHref' cache classmap idocCache toNavRoute = FormatHan
         tm <- lift getRouteToMaster
         let root = maybe "" (r . tm) mcr
 
-        ex <- liftIO $ runDITA cache sm $ do
+        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
             let ri topic = RenderInfo
                     { riTopic = topic
                     , riMisc = def
@@ -136,7 +138,7 @@ ditamapFormatHandler renderHref' cache classmap idocCache toNavRoute = FormatHan
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter
     , fhRefersTo = \sm uri -> do
-        edoc <- runDITA cache sm $ loadDoc uri
+        edoc <- withFileLoader $ \l -> runDITA cache sm (Just l) $ loadDoc uri
         case edoc of
             Left{} -> return []
             Right doc -> do
@@ -232,6 +234,9 @@ xmlFilter lbs =
     case parseLBS def lbs of
         Left{} -> Nothing
         Right (Document a root b) -> Just $ renderBytes def $ Document a (fixIds root) b
+
+withFileLoader :: a
+withFileLoader = undefined
 
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
 goElem _ _ _ = Nothing
