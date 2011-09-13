@@ -28,6 +28,11 @@ import qualified Text.XML.Catalog as C
 import DITA.Types (hrefFile)
 import qualified Data.Map as Map
 import Data.IORef
+import qualified Network.Wai as W
+import Data.Text.Encoding (encodeUtf8)
+import Control.Monad (join)
+import qualified Network.HTTP.Types as H
+import qualified Data.ByteString as S
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -85,9 +90,9 @@ withCms conf logger f = do
                     , ditamapFormatHandler renderHref cache classmap idocCache
                     ] (simpleFileStore "data") raw
 #ifdef WINDOWS
-        toWaiApp h >>= f >> return ()
+        toWaiApp h >>= f . book >> return ()
 #else
-        tid <- forkIO $ toWaiApp h >>= f >> return ()
+        tid <- forkIO $ toWaiApp h >>= f . book >> return ()
         flag <- newEmptyMVar
         _ <- Signal.installHandler Signal.sigINT (Signal.CatchOnce $ do
             putStrLn "Caught an interrupt"
@@ -95,6 +100,24 @@ withCms conf logger f = do
             putMVar flag ()) Nothing
         takeMVar flag
 #endif
+
+book :: W.Middleware
+book app req =
+    case W.pathInfo req of
+        ["book"] -> app req
+            { W.pathInfo = ["home", "snoyberg", "sample", "map-1.ditamap"]
+            }
+        ["book", nav] -> app req
+            { W.pathInfo = ["home", "snoyberg", "sample", "map-1.ditamap"]
+            , W.queryString = [("nav", Just $ encodeUtf8 nav)]
+            }
+        ["home", "snoyberg", "sample", "map-1.ditamap"] ->
+            case join $ lookup "nav" $ W.queryString req of
+                Nothing -> redir ["book"]
+                Just nav -> redir ["book", nav]
+        _ -> app req
+  where
+    redir ps = return $ W.responseLBS H.status301 [("Location", S.concat $ concatMap (\x -> ["/", x]) ps)] ""
 
 -- for yesod devel
 withDevelAppPort :: Dynamic

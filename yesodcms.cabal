@@ -107,6 +107,7 @@ executable         yesodcms
                  , spoon
                  , zip-archive
                  , time
+                 , wai
 
     if !os(windows)
          build-depends: unix

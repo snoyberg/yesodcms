@@ -87,6 +87,12 @@ ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
         mnavid <- lift $ runInputGet $ iopt textField "nav"
+
+        r <- lift getUrlRender
+        mcr <- lift getCurrentRoute
+        tm <- lift getRouteToMaster
+        let root = maybe "" (r . tm) mcr
+
         ex <- liftIO $ runDITA cache sm $ do
             let ri topic = RenderInfo
                     { riTopic = topic
@@ -117,9 +123,10 @@ ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
                         liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri (toUpdate, doc) m, ()))
                         return doc
                     Just doc -> return doc
+
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
-                Nothing -> (docTitle doc, wrapper Nothing (showNavs (docNavs doc)) [])
-                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs (docNavs doc)) (showNav ri nav))
+                Nothing -> (docTitle doc, wrapper Nothing (showNavs root (docNavs doc)) [])
+                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav ri nav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
             Right (title, nodes) -> do
@@ -136,17 +143,17 @@ ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
         <h1>#{title}
     ^{content}
 |]
-    showNavs [] = []
-    showNavs navs = [xml|
+    showNavs _ [] = []
+    showNavs root navs = [xml|
 <ul>
     $forall nav <- navs
         <li>
             $maybe ntt <- navTopicTree nav
-                <a href="?nav=#{unNavId $ fst ntt}">
+                <a href="#{root}?nav=#{unNavId $ fst ntt}">
                     \#{navTitle nav}
             $nothing
                 \#{navTitle nav}
-            ^{showNavs $ navChildren nav}
+            ^{showNavs root $ navChildren nav}
 |]
     showNav ri Nav { navTopicTree = Just (_, tt) } = renderTopicTree ri tt
     showNav _ _ = []
