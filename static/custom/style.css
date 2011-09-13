@@ -1,7 +1,6 @@
 body {
     font-family: Calibri, Helvetica, "Droid Sans", "DejaVu Sans", Verdana, sans-serif;
-    margin: 0.5em auto;
-    max-width: 960px;
+    margin: 1em;
 }
 h1, h2, h3, h4, h5, h6 {
     font-family: Cambria, Georgia, "Droid Serif", "DejaVu Serif", serif;
@@ -38,8 +37,7 @@ form > table td {
     color: #999;
 }
 #breadcrumbs a, #breadcrumbs a:visited {
-    color: #999;
-    text-decoration: underline;
+    color: #669;
 }
 form .errors {
     color: #900;
@@ -57,13 +55,17 @@ nav#maptoc {
 }
 nav#maptoc ul {
     padding-left: 20px;
+    margin: 0;
+}
+article {
+    max-width: 800px;
 }
 nav#maptoc li {
     margin: 0.5em 0 0 0;
 }
 article#mapcontent {
     display: table-cell;
-    padding-left: 10px;
+    padding-left: 30px;
 }
 aside {
     margin: 0.5em;
