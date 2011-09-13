@@ -16,7 +16,7 @@ pr-d/codeblock { tag: pre; class: codeblock; }
 topic/shortdesc { tag: div; class: shortdesc; }
 topic/note { tag: aside; class: note; }
 
-topic/p { tag: p; class: has-comments; }
+topic/p { tag: p; class: hascomments; }
 task/cmd { tag: p; }
 topic/ol { tag: ol; }
 topic/ul { tag: ul; }

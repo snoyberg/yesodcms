@@ -99,6 +99,7 @@ instance Yesod Cms where
             $(widgetFile "top-bar")
             widget
             addScriptEither $ urlJqueryJs y
+            $(widgetFile "comments")
         hamletToRepHtml $(hamletFile "default-layout")
 
     -- This is done to provide an optimization for serving static files from
@@ -203,3 +204,5 @@ instance YesodBreadcrumbs Cms where
     breadcrumb RobotsR{} = return ("", Nothing)
     breadcrumb UserFileIntR{} = return ("", Nothing)
     breadcrumb RedirectorR{} = return ("", Nothing)
+    breadcrumb CommentsR = return ("", Nothing)
+    breadcrumb CommentCountR = return ("", Nothing)

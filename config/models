@@ -12,3 +12,8 @@ CanonPath
 FileName
     uri Text
     UniqueFileName uri
+Comment
+    element Text
+    author UserId
+    content Text
+    time UTCTime

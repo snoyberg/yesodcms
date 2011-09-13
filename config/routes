@@ -18,3 +18,6 @@
 /profile ProfileR GET POST
 
 /redirector/#Text RedirectorR GET
+
+/comments/count CommentCountR GET
+/comments CommentsR GET POST

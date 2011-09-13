@@ -46,6 +46,7 @@ library
                      Handler.UserFile
                      Handler.Profile
                      Handler.Page
+                     Handler.Comments
     ghc-options:   -Wall -threaded -O0 -Werror
 
 executable         yesodcms
@@ -108,6 +109,9 @@ executable         yesodcms
                  , zip-archive
                  , time
                  , wai
+                 , aeson-native
+                 , vector
+                 , old-locale
 
     if !os(windows)
          build-depends: unix

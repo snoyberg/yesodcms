@@ -1,0 +1,47 @@
+a.commentlink {
+    font-size: 0.7em;
+    color: #666;
+    cursor: pointer;
+}
+
+div.comments {
+    margin-left: 1em;
+    margin-right: 2em;
+    border: 1px solid #666;
+    padding: 0.5em;
+    background: #e8e8e8;
+}
+
+div.comments.hidden {
+    display: none;
+}
+
+div.comments input {
+    display: block;
+}
+
+div.comments dt {
+    font-size: 0.8em;
+    color: #333;
+}
+
+div.comments dd {
+    margin-bottom: 1em;
+}
+
+div.comments textarea {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+div.paragraph-link {
+    position: relative;
+
+}
+
+div.paragraph-link a, div.paragraph-link a:visited {
+    position: absolute;
+    left: -0.8em;
+    top: 0.2em;
+    color: #aaa;
+}
