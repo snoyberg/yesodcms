@@ -21,3 +21,7 @@
 
 /comments/count CommentCountR GET
 /comments CommentsR GET POST
+
+/feed BlogFeedR GET
+/news ContentFeedR GET
+/news/item/#FeedItemId ContentFeedItemR GET

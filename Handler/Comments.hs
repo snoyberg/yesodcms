@@ -16,6 +16,8 @@ import qualified Data.Text as T
 import Data.Text.Lazy (toStrict)
 import System.Locale
 import Yesod.Goodies.Gravatar
+import Handler.Feed (addFeedItemText)
+import Data.Maybe (fromMaybe)
 
 getCommentCountR :: Handler RepJson
 getCommentCountR = do
@@ -46,26 +48,20 @@ getCommentsR = do
 
 postCommentsR :: Handler ()
 postCommentsR = do
-    (uid, _u) <- requireAuth
+    (uid, u) <- requireAuth
     element <- runInputGet $ ireq textField "element"
     content <- runInputPost $ ireq textField "content"
-    source <- runInputPost $ ireq textField "source"
+    source <- runInputPost $ ireq textField "source" -- FIXME add some sanity checking that this is the same site
     now <- liftIO getCurrentTime
+    let dest = T.concat
+            [ T.takeWhile (/= '#') source
+            , "#"
+            , element
+            ]
     runDB $ do
         _ <- insert $ Comment element uid content now
-        {- FIXME
-        addNewsItem (T.concat
-            [ userName u
-            , " commented on "
-            , topicTitle src
-            ]) (TopicR topic) (Just hash) (toHtml content)
-        -}
-        return ()
-    redirectText RedirectTemporary $ T.concat
-        [ T.takeWhile (/= '#') source
-        , "#"
-        , element
-        ]
+        addFeedItemText (fromMaybe (userHandle u) (userName u) `T.append` " posted a comment") dest (toHtml content)
+    redirectText RedirectTemporary dest
 
 prettyDateTime :: UTCTime -> Text
 prettyDateTime = pack . formatTime defaultTimeLocale "%B %e, %y %l:%M %P"

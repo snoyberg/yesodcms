@@ -18,3 +18,9 @@ Comment
     author UserId
     content Text
     time UTCTime
+FeedItem
+    created UTCTime
+    title Text
+    url Text
+    content Html
+    deriving

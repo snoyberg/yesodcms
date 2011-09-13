@@ -41,6 +41,7 @@ import FormatHandler
 import FormatHandler.Html
 import FileStore
 import Data.Map (Map)
+import Yesod.AtomFeed
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -100,6 +101,8 @@ instance Yesod Cms where
             widget
             addScriptEither $ urlJqueryJs y
             $(widgetFile "comments")
+            atomLink BlogFeedR "Blog posts"
+            atomLink ContentFeedR "Site activity"
         hamletToRepHtml $(hamletFile "default-layout")
 
     -- This is done to provide an optimization for serving static files from
@@ -206,3 +209,6 @@ instance YesodBreadcrumbs Cms where
     breadcrumb RedirectorR{} = return ("", Nothing)
     breadcrumb CommentsR = return ("", Nothing)
     breadcrumb CommentCountR = return ("", Nothing)
+    breadcrumb BlogFeedR = return ("", Nothing)
+    breadcrumb ContentFeedR = return ("", Nothing)
+    breadcrumb ContentFeedItemR{} = return ("", Nothing)

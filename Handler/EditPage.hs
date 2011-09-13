@@ -19,6 +19,8 @@ import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
 import Control.Monad (unless, forM_)
+import Handler.Feed (addFeedItem)
+import Text.Hamlet (shamlet)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
@@ -47,7 +49,9 @@ getEditPageR ts = do
     case res of
         FormSuccess c -> do
             liftIO $ fsPutFile fs t $ enumList 1 [encodeUtf8 c]
-            runDB $ setCanons t
+            runDB $ do
+                setCanons t
+                addFeedItem "File updated" (RedirectorR t) [] [shamlet|File updated: #{t}|]
             setMessage "File contents updated"
         _ -> return ()
     let toView = isJust mcontents || isSucc res
@@ -80,6 +84,7 @@ postEditPageR ts = do
             let t = T.intercalate "/" ts
             liftIO $ fsDelete fs t
             setMessage "Page deleted"
+            runDB $ addFeedItem "Page deleted" (RedirectorR t) [] [shamlet|Page deleted: #{t}|]
             redirect RedirectTemporary RootR
         Nothing -> getEditPageR ts
 

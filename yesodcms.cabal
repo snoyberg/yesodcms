@@ -47,6 +47,7 @@ library
                      Handler.Profile
                      Handler.Page
                      Handler.Comments
+                     Handler.Feed
     ghc-options:   -Wall -threaded -O0 -Werror
 
 executable         yesodcms
@@ -113,6 +114,7 @@ executable         yesodcms
                  , vector
                  , old-locale
                  , yesod-goodies        >= 0.0.5
+                 , yesod-newsfeed
 
     if !os(windows)
          build-depends: unix
