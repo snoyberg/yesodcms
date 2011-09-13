@@ -83,6 +83,8 @@ mkYesodData "Cms" $(parseRoutesFile "config/routes")
 instance Yesod Cms where
     approot = Settings.appRoot . settings
 
+    clientSessionDuration _ = 60 * 24 * 14
+
     -- Place the session key file in the config folder
     encryptKey _ = fmap Just $ getKey "config/client_session_key.aes"
 

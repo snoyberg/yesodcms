@@ -18,9 +18,12 @@ import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
 
+checkPerms :: [T.Text] -> Handler ()
+checkPerms _ = return () -- FIXME validate that there are no invalid paths (leading dots, slashes), check permissions
+
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
-    -- FIXME validate that there are no invalid paths (leading dots, slashes), check permissions
+    checkPerms ts
     let ext = snd $ T.breakOnEnd "." $ safeLast "" ts
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     fh <- maybe (invalidArgs ["Invalid file extension: " `T.append` ext]) return $ findHandler ext fhs
@@ -56,4 +59,14 @@ safeInit [] = []
 safeInit x = init x
 
 postEditPageR :: [T.Text] -> Handler RepHtml
-postEditPageR = getEditPageR
+postEditPageR ts = do
+    checkPerms ts
+    toDelete <- runInputPost $ iopt textField "delete"
+    case toDelete of
+        Just{} -> do
+            -- FIXME Delete confirmation
+            Cms { fileStore = fs } <- getYesod
+            liftIO $ fsDelete fs $ T.intercalate "/" ts
+            setMessage "Page deleted"
+            redirect RedirectTemporary RootR
+        Nothing -> getEditPageR ts

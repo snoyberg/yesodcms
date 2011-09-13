@@ -9,7 +9,7 @@ import qualified Data.Text as T
 import Prelude hiding (FilePath)
 import Filesystem.Path.CurrentOS
 import Filesystem
-import Control.Monad (forM)
+import Control.Monad (forM, when)
 import Network.URI.Enumerator
 import qualified Data.Set as Set
 
@@ -18,6 +18,7 @@ type FileStorePath = T.Text
 data FileStore = FileStore
     { fsGetFile :: FileStorePath -> IO (Maybe URI)
     , fsPutFile :: FileStorePath -> Enumerator ByteString IO () -> IO ()
+    , fsDelete :: FileStorePath -> IO ()
     , fsList :: FileStorePath -> IO [(T.Text, Bool)] -- ^ is it a folder?
     , fsMkdir :: FileStorePath -> IO ()
     , fsSM :: SchemeMap IO
@@ -38,6 +39,10 @@ simpleFileStore dir = FileStore
         let fp = dir </> fromText t
         createTree $ directory fp
         withFile fp WriteMode $ \h -> run_ $ enum $$ iterHandle h
+    , fsDelete = \t -> do
+        let fp = dir </> fromText t
+        f <- isFile fp
+        when f $ removeFile fp
     , fsList = \t -> do
         let dir' = dir </> fromText t
         d <- isDirectory dir'
