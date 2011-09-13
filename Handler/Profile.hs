@@ -7,11 +7,13 @@ module Handler.Profile
 import Foundation
 import Control.Applicative ((<$>), (<*>), pure)
 import qualified Data.Text as T
+import Yesod.Goodies.Gravatar
 
 form :: UserId -> User -> Html -> Form Cms Cms (FormResult User, Widget)
 form uid user = renderTable $ User
     <$> pure (userEmail user)
-    <*> areq (checkM unusedHandle textField) "Display name" (Just $ userHandle user)
+    <*> aopt textField "Display name" (Just $ userName user)
+    <*> areq (checkM unusedHandle textField) "Screen name" (Just $ userHandle user)
     <*> pure (userAdmin user)
   where
     unusedHandle handle = do
@@ -31,6 +33,11 @@ getProfileR = do
             setMessage "Profile updated"
             redirect RedirectTemporary ProfileR
         _ -> defaultLayout $(widgetFile "profile")
+  where
+    opts = defaultOptions
+        { gDefault = Just Identicon
+        , gSize = Just $ Size 160
+        }
 
 postProfileR :: Handler RepHtml
 postProfileR = getProfileR

@@ -4,3 +4,12 @@
         <tr>
             <td colspan=3>
                 <input type=submit value="Update Profile">
+<h2>Gravatar
+<p style=max-width:600px>
+    This site uses #
+    <a href=http://gravatar.com>Gravatar
+    \ for displaying user avatars. In order to change your avatar, please log in to Gravatar with the email address #
+    <b>#{userEmail u}
+    . Your current avatar is:
+<p>
+    <img alt=Avatar src=#{gravatarImg (userEmail u) opts}

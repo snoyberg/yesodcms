@@ -30,7 +30,7 @@ getCommentsR = do
     comments <- runDB $ selectList [CommentElement ==. element] [Asc CommentTime] >>= (mapM $ \(_, c) -> do
         a <- get404 $ commentAuthor c
         return $ Object $ Map.fromList
-            [ ("name", String $ userHandle a)
+            [ ("name", String $ toStrict $ renderHtml $ userDisplayName a)
             , ("gravatar", String $ pack $ gravatarImg (userEmail a) defaultOptions
                 { gSize = Just $ Size 40
                 , gDefault = Just Identicon

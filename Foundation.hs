@@ -154,7 +154,7 @@ instance YesodAuth Cms where
             Just (uid, _) -> return $ Just uid
             Nothing -> do
                 handle <- getNextHandle 1
-                fmap Just $ insert $ User (credsIdent creds) handle False
+                fmap Just $ insert $ User (credsIdent creds) Nothing handle False
       where
         getNextHandle i = do
             let h = "user-" `T.append` T.pack (show (i :: Int))

@@ -2,4 +2,4 @@
     $forall user <- users
         <li>
             <a href=@{UserFileR (userHandle user) mempty} style="background-image:url(#{gravatarImg (userEmail user) opts})">
-                <span>#{userHandle user}
+                <span>#{userDisplayName user}
