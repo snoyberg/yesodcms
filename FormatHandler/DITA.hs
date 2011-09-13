@@ -18,7 +18,7 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..))
+import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, ttFiles)
 import DITA.Util (text)
 import Control.Monad (unless)
 import Yesod.Core
@@ -27,7 +27,7 @@ import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, maybeToList)
 import Text.Blaze (toHtml, Html)
 import Text.Hamlet.XML (xml)
 import qualified Data.Map as Map
@@ -73,15 +73,17 @@ ditaFormatHandler renderHref' cache classmap = FormatHandler
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter
+    , fhRefersTo = const $ const $ return []
     }
 
-ditamapFormatHandler :: RenderMessage master FormMessage
+ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      => (Href -> T.Text)
                      -> C.DTDCache IO
                      -> ClassMap
                      -> IORef (Map.Map URI (UTCTime, Doc))
+                     -> (URI -> NavId -> (Route master, [(T.Text, T.Text)]))
                      -> FormatHandler master
-ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
+ditamapFormatHandler renderHref' cache classmap idocCache toNavRoute = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
@@ -133,8 +135,17 @@ ditamapFormatHandler renderHref' cache classmap idocCache = FormatHandler
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter
+    , fhRefersTo = \sm uri -> do
+        edoc <- runDITA cache sm $ loadDoc uri
+        case edoc of
+            Left{} -> return []
+            Right doc -> do
+                let navPairs = concatMap deepPairs $ docNavs doc
+                return $ concatMap (\(nav, tt) -> map (\uri' -> (uri', toNavRoute uri nav)) $ Set.toList $ deepTTFiles tt) navPairs
     }
   where
+    deepPairs nav = maybeToList (navTopicTree nav) ++ concatMap deepPairs (navChildren nav)
+    deepTTFiles tt = Set.unions $ ttFiles tt : map deepTTFiles (ttChildren tt)
     wrapper mtitle toc content = [xml|
 <nav id=maptoc>
     ^{toc}

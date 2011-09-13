@@ -22,6 +22,7 @@ data FileStore = FileStore
     , fsList :: FileStorePath -> IO [(T.Text, Bool)] -- ^ is it a folder?
     , fsMkdir :: FileStorePath -> IO ()
     , fsSM :: SchemeMap IO
+    , fsFromURI :: URI -> Maybe FileStorePath
     }
 
 simpleFileStore :: FilePath -> FileStore
@@ -56,4 +57,5 @@ simpleFileStore dir = FileStore
         , schemeReader = Just $ enumFile . encodeString . (dir </>) . fromText . uriPath
         , schemeWriter = Nothing
         }
+    , fsFromURI = \u -> if uriScheme u == "fs:" then Just (uriPath u) else Nothing
     }

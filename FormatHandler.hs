@@ -28,6 +28,7 @@ data FormatHandler master = FormatHandler
     , fhForm :: forall sub. RenderMessage master FormMessage => Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())
     , fhWidget :: forall sub. SchemeMap IO -> URI -> GWidget sub master ()
     , fhFilter :: L.ByteString -> Maybe (Enumerator S.ByteString IO ())
+    , fhRefersTo :: SchemeMap IO -> URI -> IO [(URI, (Route master, [(T.Text, T.Text)]))]
     }
 
 type Ext = T.Text

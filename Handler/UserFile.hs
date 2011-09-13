@@ -16,7 +16,7 @@ import Control.Monad (unless, when)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe)
-import Handler.EditPage (routes)
+import Handler.EditPage (routes, setCanons)
 import Network.HTTP.Types (decodePathSegments)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Map as Map
@@ -38,7 +38,8 @@ getUserFileIntR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileIntR uid' ts = do
     uid <- maybe notFound return $ fromSinglePiece uid'
     u <- runDB $ get404 uid
-    redirect RedirectPermanent $ UserFileR (userHandle u) ts
+    gets <- reqGetParams `fmap` getRequest
+    redirectParams RedirectPermanent (UserFileR (userHandle u) ts) gets
 
 getUserFileR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileR user ts = do
@@ -63,13 +64,18 @@ getUserFileR user ts = do
                 -- FIXME re-enable sendfile optimization
                 Just mime -> sendResponse (mime, ContentEnum (readURI (fsSM fs) enum $= EL.map fromByteString))
                 Nothing -> do
-                    fh <- maybe notFound return $ findHandler ext fhs
-                    defaultLayout $ do
-                        fhWidget fh (fsSM fs) enum
-                        when canWrite $ toWidget [hamlet|
+                    -- Check for a canonical path and redirect if present
+                    mcanon <- runDB $ selectFirst [CanonPathRefered ==. t] []
+                    case mcanon of
+                        Nothing -> do
+                            fh <- maybe notFound return $ findHandler ext fhs
+                            defaultLayout $ do
+                                fhWidget fh (fsSM fs) enum
+                                when canWrite $ toWidget [hamlet|
 <p>
     <a href=@{EditPageR ts'}>Edit
 |]
+                        Just (_, canon) -> redirectText RedirectTemporary $ canonPathRedirect canon
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do
@@ -103,7 +109,8 @@ postUserFileR user ts = do
                     setMessage "Invalid ZIP file"
                 Just{} -> do
                     let toPath e = T.intercalate "/" $ "home" : toSinglePiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
-                    nu <- execWriterT $ mapM_ (upload fs rawFiles fhs toPath) $ zEntries archive
+                    (updated, nu) <- execWriterT $ mapM_ (upload fs rawFiles fhs toPath) $ zEntries archive
+                    runDB $ mapM_ setCanons $ Set.toList updated
                     setMessage $
                         if Set.null nu
                             then "ZIP file uploaded successfully"
@@ -119,7 +126,8 @@ postUserFileR user ts = do
         let t = toPath entry
         let ext = snd $ T.breakOnEnd "." t
         let lbs = fromEntry entry
-        let onErr = tell $ Set.singleton $ T.pack $ eRelativePath entry
+        let onSucc = tell (Set.singleton t, Set.empty)
+        let onErr = tell (Set.empty, Set.singleton $ T.pack $ eRelativePath entry)
         case Map.lookup ext rawFiles of
             Nothing ->
                 case findHandler ext fhs of
@@ -128,10 +136,14 @@ postUserFileR user ts = do
                         case fhFilter fh lbs of
                             Just enum -> liftIO $ fsPutFile fs t enum
                             Nothing -> onErr
-            Just{} -> liftIO $ fsPutFile fs t $ enumList 8 $ L.toChunks lbs
+            Just{} -> do
+                liftIO $ fsPutFile fs t $ enumList 8 $ L.toChunks lbs
+                onSucc
 
 getRedirectorR :: T.Text -> Handler ()
 getRedirectorR t =
     case routes $ decodePathSegments $ encodeUtf8 t of
         [] -> notFound
-        (_, r):_ -> redirect RedirectPermanent r
+        (_, r):_ -> do
+            gets <- reqGetParams `fmap` getRequest
+            redirectParams RedirectPermanent r gets

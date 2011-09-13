@@ -3,6 +3,7 @@ module Handler.EditPage
     ( getEditPageR
     , postEditPageR
     , routes
+    , setCanons
     ) where
 
 import Foundation
@@ -17,7 +18,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
-import Control.Monad (unless)
+import Control.Monad (unless, forM_)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
@@ -26,8 +27,8 @@ checkPerms ("page":_) = do
     (_, u) <- requireAuth
     unless (userAdmin u) $ permissionDenied "Only admins can edit this page"
 checkPerms ("home":user:_) = do
-    (_, u) <- requireAuth
-    unless (userHandle u == user) $ permissionDenied "You do not own this page"
+    uid <- requireAuthId
+    unless (toSinglePiece uid == user) $ permissionDenied "You do not own this page"
 checkPerms _ = permissionDenied "Path not understood"
 
 getEditPageR :: [T.Text] -> Handler RepHtml
@@ -46,6 +47,7 @@ getEditPageR ts = do
     case res of
         FormSuccess c -> do
             liftIO $ fsPutFile fs t $ enumList 1 [encodeUtf8 c]
+            runDB $ setCanons t
             setMessage "File contents updated"
         _ -> return ()
     let toView = isJust mcontents || isSucc res
@@ -75,7 +77,33 @@ postEditPageR ts = do
         Just{} -> do
             -- FIXME Delete confirmation
             Cms { fileStore = fs } <- getYesod
-            liftIO $ fsDelete fs $ T.intercalate "/" ts
+            let t = T.intercalate "/" ts
+            liftIO $ fsDelete fs t
             setMessage "Page deleted"
             redirect RedirectTemporary RootR
         Nothing -> getEditPageR ts
+
+setCanons :: FileStorePath -> YesodDB Cms Cms ()
+setCanons t = do
+    deleteWhere [CanonPathReferer ==. t]
+    render <- lift getUrlRenderParams
+    let ext = snd $ T.breakOnEnd "." t
+    Cms { formatHandlers = fhs, fileStore = fs } <- lift getYesod
+    case findHandler ext fhs of
+        Nothing -> return ()
+        Just fh -> do
+            muri <- liftIO $ fsGetFile fs t
+            case muri of
+                Nothing -> return ()
+                Just uri -> do
+                    pairs <- liftIO $ fhRefersTo fh (fsSM fs) uri
+                    forM_ pairs $ \(referedURI, (route, query)) ->
+                        case fsFromURI fs referedURI of
+                            Nothing -> return ()
+                            Just refered -> do
+                                _ <- insert CanonPath
+                                    { canonPathReferer = t
+                                    , canonPathRefered = refered
+                                    , canonPathRedirect = render route query
+                                    }
+                                return ()

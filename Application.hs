@@ -25,7 +25,7 @@ import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
 import qualified Text.XML.Catalog as C
-import DITA.Types (hrefFile)
+import DITA.Types (hrefFile, NavId (..))
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W
@@ -33,6 +33,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Control.Monad (join)
 import qualified Network.HTTP.Types as H
 import qualified Data.ByteString as S
+import qualified Data.Text as T
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -87,7 +88,7 @@ withCms conf logger f = do
                     [ textFormatHandler
                     , htmlFormatHandler
                     , ditaFormatHandler renderHref cache classmap
-                    , ditamapFormatHandler renderHref cache classmap idocCache
+                    , ditamapFormatHandler renderHref cache classmap idocCache toNavRoute
                     ] (simpleFileStore "data") raw
 #ifdef WINDOWS
         toWaiApp h >>= f . book >> return ()
@@ -134,3 +135,6 @@ withDevelAppPort =
         flushLogger logger
       where
         logHandle logger msg = logLazyText logger msg >> flushLogger logger
+
+toNavRoute :: URI -> NavId -> (CmsRoute, [(T.Text, T.Text)])
+toNavRoute uri (NavId nid) = (RedirectorR (uriPath uri), [("nav", nid)])

@@ -4,3 +4,8 @@ User
     admin Bool
     UniqueEmail email
     UniqueHandle handle
+CanonPath
+    referer FileStorePath
+    refered FileStorePath
+    redirect Text
+    deriving

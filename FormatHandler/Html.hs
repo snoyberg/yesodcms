@@ -34,6 +34,7 @@ htmlFormatHandler = FormatHandler
         t <- liftIO $ uriToText sm uri
         toWidget $ preEscapedText t
     , fhFilter = Just . enumList 8 . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
+    , fhRefersTo = const $ const $ return []
     }
 
 class YesodAloha a where

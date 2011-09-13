@@ -29,6 +29,7 @@ textFormatHandler = FormatHandler
         toWidget [lucius|##{id'} { white-space: pre }|]
         toWidget [shamlet|<div ##{id'}>#{t}|]
     , fhFilter = Just . enumList 8 . L.toChunks
+    , fhRefersTo = const $ const $ return []
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]

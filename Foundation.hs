@@ -9,6 +9,7 @@ module Foundation
     , Widget
     , maybeAuthId
     , maybeAuth
+    , requireAuthId
     , requireAuth
     , module Yesod
     , module Settings
