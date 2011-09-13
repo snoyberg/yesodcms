@@ -17,9 +17,18 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
+import Control.Monad (unless)
 
 checkPerms :: [T.Text] -> Handler ()
-checkPerms _ = return () -- FIXME validate that there are no invalid paths (leading dots, slashes), check permissions
+checkPerms [] = permissionDenied "Cannot edit page"
+checkPerms ("wiki":_) = return ()
+checkPerms ("page":_) = do
+    (_, u) <- requireAuth
+    unless (userAdmin u) $ permissionDenied "Only admins can edit this page"
+checkPerms ("home":user:_) = do
+    (_, u) <- requireAuth
+    unless (userHandle u == user) $ permissionDenied "You do not own this page"
+checkPerms _ = permissionDenied "Path not understood"
 
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
