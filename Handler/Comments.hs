@@ -15,6 +15,7 @@ import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Data.Text.Lazy (toStrict)
 import System.Locale
+import Yesod.Goodies.Gravatar
 
 getCommentCountR :: Handler RepJson
 getCommentCountR = do
@@ -30,6 +31,10 @@ getCommentsR = do
         a <- get404 $ commentAuthor c
         return $ Object $ Map.fromList
             [ ("name", String $ userHandle a)
+            , ("gravatar", String $ pack $ gravatarImg (userEmail a) defaultOptions
+                { gSize = Just $ Size 40
+                , gDefault = Just Identicon
+                })
             , ("date", String $ prettyDateTime $ commentTime c)
             , ("content", String $ toStrict $ renderHtml $ toHtml $ commentContent c)
             ]

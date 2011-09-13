@@ -1,0 +1,18 @@
+#users li {
+    display: inline-block;
+    list-style: none;
+    width: 100px;
+}
+
+#users a {
+    display: block;
+    width: 100px;
+    padding-top: 100px;
+    background-repeat: no-repeat;
+    background-position: 10px 10px;
+}
+
+#users span {
+    display: block;
+    text-align: center;
+}

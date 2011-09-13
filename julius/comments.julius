@@ -17,7 +17,9 @@ $(function(){
                     $.getJSON("@{CommentsR}", {element:id}, function(comments){
                         var html = ["<dl>"];
                         $.each(comments.comments, function(i, comment){
-                            html.push("<dt>");
+                            html.push("<dt><img src='");
+                            html.push(comment.gravatar);
+                            html.push("'> ");
                             html.push(comment.name);
                             html.push(" <i>");
                             html.push(comment.date);

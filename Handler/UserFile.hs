@@ -28,11 +28,17 @@ import Codec.Archive.Zip
 import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
+import Yesod.Goodies.Gravatar
 
 getUsersR :: Handler RepHtml
 getUsersR = do
-    users <- runDB $ fmap (map $ userHandle . snd) $ selectList [] [Asc UserHandle]
+    users <- runDB $ fmap (map snd) $ selectList [] [Asc UserHandle]
     defaultLayout $(widgetFile "users")
+  where
+    opts = defaultOptions
+        { gSize = Just $ Size 80
+        , gDefault = Just Identicon
+        }
 
 getUserFileIntR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileIntR uid' ts = do

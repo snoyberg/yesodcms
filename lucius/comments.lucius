@@ -27,6 +27,7 @@ div.comments dt {
 
 div.comments dd {
     margin-bottom: 1em;
+    white-space: pre;
 }
 
 div.comments textarea {

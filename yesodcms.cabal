@@ -112,6 +112,7 @@ executable         yesodcms
                  , aeson-native
                  , vector
                  , old-locale
+                 , yesod-goodies        >= 0.0.5
 
     if !os(windows)
          build-depends: unix
