@@ -37,6 +37,7 @@ library
                      Settings.StaticFiles
                      FormatHandler
                      FormatHandler.Text
+                     FormatHandler.Markdown
                      FormatHandler.Html
                      FormatHandler.DITA
                      FileStore
@@ -119,6 +120,7 @@ executable         yesodcms
                  , yesod-newsfeed
                  , sphinx
                  , tagsoup
+                 , pandoc
 
     if !os(windows)
          build-depends: unix

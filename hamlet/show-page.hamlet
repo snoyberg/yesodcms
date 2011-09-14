@@ -2,3 +2,5 @@
 $if canWrite
     <p>
         <a href=@{EditPageR $ pieces' ext}>Edit this page
+    <form method=post action=@{EditPageR $ pieces' ext}>
+        <input type=submit name=delete value="Delete this page">
