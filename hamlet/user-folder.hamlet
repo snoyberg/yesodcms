@@ -16,7 +16,7 @@ $if not $ null files
         $forall f <- files
             <li>
                 <a href=@{link f}>#{f}
-                $if canWrite
+                $if (&&) canWrite $ isEditable f
                     \ #
                     <a .editlink href=@{editLink f}>edit
 $if canWrite

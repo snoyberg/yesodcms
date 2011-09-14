@@ -2,6 +2,7 @@
     display: inline-block;
     list-style: none;
     width: 100px;
+    vertical-align: top;
 }
 
 #users a {

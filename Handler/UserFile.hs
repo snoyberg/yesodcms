@@ -16,7 +16,7 @@ import FormatHandler
 import Control.Monad (unless)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, isJust)
 import Handler.EditPage (routes, setCanons)
 import Network.HTTP.Types (decodePathSegments)
 import Data.Text.Encoding (encodeUtf8)
@@ -65,6 +65,7 @@ getUserFileR user ts = do
             let files = map fst $ filter (not . snd) contents
             let link x = UserFileR user $ ts ++ [x]
                 editLink x = EditPageR $ ts' ++ [x]
+                isEditable x = isJust $ findHandler (snd $ T.breakOnEnd "." x) fhs
             let formats = zip [0 :: Int ..] $ map fhName fhs
             defaultLayout $(widgetFile "user-folder")
         Just enum -> do
