@@ -115,13 +115,13 @@ book :: W.Middleware
 book app req =
     case W.pathInfo req of
         ["book"] -> app req
-            { W.pathInfo = ["home", "snoyberg", "sample", "map-1.ditamap"]
+            { W.pathInfo = ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"]
             }
         ["book", nav] -> app req
-            { W.pathInfo = ["home", "snoyberg", "sample", "map-1.ditamap"]
+            { W.pathInfo = ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"]
             , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
             }
-        ["home", "snoyberg", "sample", "map-1.ditamap"] ->
+        ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"] ->
             case join $ lookup "nav" $ W.queryString req of
                 Nothing -> redir ["book"] $ W.queryString req
                 Just nav -> redir ["book", decodeUtf8With lenientDecode nav] noNav
