@@ -13,8 +13,7 @@ import qualified Data.Text as T
 import Control.Arrow (second, (&&&))
 import Data.List (groupBy)
 import Data.Function (on)
-import FormatHandler
-import FileStore
+import Handler.Feed (blogWidget)
 
 getBlogR :: Handler ()
 getBlogR = do
@@ -40,13 +39,7 @@ getBlogPostR y m s = do
     u <- runDB $ get404 $ blogAuthor b
     let title = blogTitle b
     archive <- fmap (map (second hoist) . hoist . map (toTuples . snd)) $ runDB $ selectList [] [Desc BlogPosted]
-    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
-    let mfh = findHandler (snd $ T.breakOnEnd "." $ blogContents b) fhs
-    muri <- liftIO $ fsGetFile fs $ blogContents b
-    let widget =
-            case (mfh, muri) of
-                (Just fh, Just uri) -> fhFlatWidget fh (fsSM fs) uri
-                _ -> [whamlet|<p>Format handler not found for #{blogContents b}|]
+    let widget = blogWidget b
     defaultLayout $(widgetFile "blog")
   where
     opts = defaultOptions

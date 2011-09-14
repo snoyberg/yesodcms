@@ -5,15 +5,50 @@ module Handler.Feed
     , getContentFeedItemR
     , addFeedItem
     , addFeedItemText
+    , blogWidget
     ) where
 
 import Foundation
 import Data.Time (getCurrentTime)
 import Data.Text (Text)
 import Yesod.Feed
+import FormatHandler
+import FileStore
+import qualified Data.Text as T
 
-getBlogFeedR :: Handler ()
-getBlogFeedR = return ()
+blogWidget :: Blog -> Widget
+blogWidget b = do
+    Cms { formatHandlers = fhs, fileStore = fs } <- lift getYesod
+    let mfh = findHandler (snd $ T.breakOnEnd "." $ blogContents b) fhs
+    muri <- liftIO $ fsGetFile fs $ blogContents b
+    case (mfh, muri) of
+        (Just fh, Just uri) -> fhFlatWidget fh (fsSM fs) uri
+        _ -> [whamlet|<p>Format handler not found for #{blogContents b}|]
+
+getBlogFeedR :: Handler RepAtomRss
+getBlogFeedR = do
+    now <- liftIO getCurrentTime
+    r <- getUrlRenderParams
+
+    blogs <- runDB $ selectList [] [Desc BlogPosted, LimitTo 3]
+    entries <- mapM (\(_, b) -> do
+        pc <- widgetToPageContent $ blogWidget b
+        return FeedEntry
+            { feedEntryLink = BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
+            , feedEntryUpdated = blogPosted b
+            , feedEntryTitle = blogTitle b
+            , feedEntryContent = pageBody pc r
+            }) blogs
+
+    newsFeed Feed
+        { feedTitle = "Yesod Wiki" -- FIXME
+        , feedLinkSelf = BlogFeedR
+        , feedLinkHome = RootR
+        , feedDescription = ""
+        , feedLanguage = "en"
+        , feedUpdated = now
+        , feedEntries = entries
+        }
 
 getContentFeedR :: Handler RepAtomRss
 getContentFeedR = do
