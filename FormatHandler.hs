@@ -31,6 +31,7 @@ data FormatHandler master = FormatHandler
     , fhRefersTo :: SchemeMap IO -> URI -> IO [(URI, (Route master, [(T.Text, T.Text)]))]
     , fhTitle :: SchemeMap IO -> URI -> IO (Maybe T.Text)
     , fhFlatWidget :: forall sub. SchemeMap IO -> URI -> GWidget sub master ()
+    , fhToText :: SchemeMap IO -> URI -> IO (Maybe T.Text)
     }
 
 type Ext = T.Text

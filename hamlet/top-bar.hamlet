@@ -17,6 +17,9 @@
             <a href=@{UsersR}>Browse
         <li>
             <a href=@{WikiR mempty}>Wiki
+        <li>
+            <form style=display:inline action=@{SearchR}>
+                <input type=search name=q placeholder=Search>
 <nav #breadcrumbs>
     $forall p <- parents
         <a href=@{fst p}>#{snd p}

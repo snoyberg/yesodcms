@@ -12,6 +12,8 @@ CanonPath
     deriving
 FileName
     uri Text
+    title Text Maybe
+    content Text Maybe
     UniqueFileName uri
 Comment
     element Text

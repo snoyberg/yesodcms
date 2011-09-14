@@ -49,6 +49,7 @@ library
                      Handler.Comments
                      Handler.Feed
                      Handler.Blog
+                     Handler.Search
     ghc-options:   -Wall -threaded -O0 -Werror
 
 executable         yesodcms
@@ -116,6 +117,8 @@ executable         yesodcms
                  , old-locale
                  , yesod-goodies        >= 0.0.5
                  , yesod-newsfeed
+                 , sphinx
+                 , tagsoup
 
     if !os(windows)
          build-depends: unix

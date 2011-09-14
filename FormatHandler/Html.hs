@@ -17,13 +17,14 @@ import Text.Lucius (lucius)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
 import Text.Hamlet (shamlet)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Text.Blaze (preEscapedText)
 import qualified Data.Set as Set
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.ByteString.Lazy as L
 import Data.Enumerator (enumList)
+import Text.HTML.TagSoup
 
 htmlFormatHandler :: (YesodAloha master, YesodJquery master) => FormatHandler master
 htmlFormatHandler = FormatHandler
@@ -35,11 +36,15 @@ htmlFormatHandler = FormatHandler
     , fhRefersTo = const $ const $ return []
     , fhTitle = \_ _ -> return Nothing
     , fhFlatWidget = widget
+    , fhToText = \sm uri -> fmap (Just . plain) $ liftIO $ uriToText sm uri
     }
   where
     widget sm uri = do
         t <- liftIO $ uriToText sm uri
         toWidget $ preEscapedText t
+    plain = T.concat . mapMaybe plain' . parseTags
+    plain' (TagText t) = Just t
+    plain' _ = Nothing
 
 class YesodAloha a where
     urlAloha :: a -> Either (Route a) T.Text

@@ -1,0 +1,6 @@
+<form method=get>
+    <p>
+        <input type=search placeholder=Search name=q value=#{fromMaybe "" mquery}>
+        \ #
+        <input type=submit value=Search>
+^{results}

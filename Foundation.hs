@@ -44,6 +44,7 @@ import FileStore
 import Data.Map (Map)
 import Yesod.AtomFeed
 import Data.Maybe (fromMaybe)
+import Control.Monad.IO.Class (MonadIO)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -208,6 +209,8 @@ instance YesodBreadcrumbs Cms where
         (_, b) <- runDB $ getBy404 $ UniqueBlog year month slug
         return (blogTitle b, Just BlogR)
 
+    breadcrumb SearchR = return ("Search", Just RootR)
+
     breadcrumb StaticR{} = return ("", Nothing)
     breadcrumb AuthR{} = return ("", Nothing)
     breadcrumb FaviconR{} = return ("", Nothing)
@@ -221,8 +224,9 @@ instance YesodBreadcrumbs Cms where
     breadcrumb ContentFeedItemR{} = return ("", Nothing)
     breadcrumb BlogPostNoDateR{} = return ("", Nothing)
     breadcrumb CreateBlogR{} = return ("", Nothing)
+    breadcrumb SearchXmlpipeR = return ("", Nothing)
 
-fileTitle :: FileStorePath -> GHandler sub Cms T.Text
+fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
 fileTitle t = do
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     let ext = snd $ T.breakOnEnd "." t

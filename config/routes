@@ -30,3 +30,6 @@
 /blog/#BlogSlugT BlogPostNoDateR GET
 /blog/#Int/#Month/#BlogSlugT BlogPostR GET
 /blog/create/#Text CreateBlogR POST
+
+/search SearchR GET
+/search/xmlpipe SearchXmlpipeR GET

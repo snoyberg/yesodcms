@@ -28,6 +28,7 @@ textFormatHandler = FormatHandler
     , fhFilter = Just . enumList 8 . L.toChunks
     , fhRefersTo = const $ const $ return []
     , fhTitle = \_ _ -> return Nothing
+    , fhToText = \sm uri -> fmap Just $ liftIO $ uriToText sm uri
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]

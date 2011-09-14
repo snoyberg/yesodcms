@@ -18,7 +18,7 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, ttFiles)
+import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, ttFiles, topicContent)
 import DITA.Util (text)
 import Control.Monad (unless)
 import Yesod.Core
@@ -55,8 +55,27 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     , fhTitle = \sm uri -> fmap (either (const Nothing) id) $ runDITA cache sm (Just loadFileId) $ do
         tts <- loadTopicTrees uri
         return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts
+    , fhToText = \sm uri -> fmap (either (const Nothing) (Just . plain)) $ runDITA cache sm (Just loadFileId) $ loadTopicTrees uri
     }
   where
+    -- Convert a list of topic trees to plain text, used for the search index
+    plain :: [D.TopicTree] -> T.Text
+    plain = T.concat . concatMap plainTT
+
+    plainTT :: D.TopicTree -> [T.Text]
+    plainTT tt = concat $ plainT (ttTopic tt) : map plainTT (ttChildren tt)
+
+    plainT :: D.Topic -> [T.Text]
+    plainT topic = concatMap plainE $ topicTitle topic : topicContent topic
+
+    plainE :: D.Element -> [T.Text]
+    plainE (D.Element _ _ _ ns) = concatMap plainN ns
+
+    plainN :: D.Node -> [T.Text]
+    plainN (D.NodeContent t) = [t]
+    plainN (D.NodeElement e) = plainE e
+    plainN _ = []
+
     widget sm uri = do
         ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
             tts <- loadTopicTrees uri
@@ -128,6 +147,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
         case ex of
             Left e -> toWidget [shamlet|<p>Error parsing DITA map: #{show e}|]
             Right doc -> toWidget $ mapM_ toHtml $ concatMap (showNavsDeep makeRi) $ docNavs doc
+    , fhToText = const $ const $ return Nothing
     }
   where
     makeRi topic = RenderInfo

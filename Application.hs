@@ -51,6 +51,7 @@ import Handler.Page
 import Handler.Comments
 import Handler.Feed
 import Handler.Blog
+import Handler.Search
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
@@ -145,5 +146,5 @@ toNavRoute uri (NavId nid) = (RedirectorR (uriPath uri), [("nav", nid)])
 loadFileId :: Settings.ConnectionPool -> URI -> IO FileId
 loadFileId p uri = flip Settings.runConnectionPool p $ do
     let str = T.pack $ show $ toNetworkURI uri
-    fid <- fmap (either fst id) $ insertBy $ FileName str
+    fid <- fmap (either fst id) $ insertBy $ FileName str Nothing Nothing
     return $ FileId $ "file" `T.append` toSinglePiece fid
