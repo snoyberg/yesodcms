@@ -47,23 +47,23 @@ form .errors {
     display: inline;
     padding-left: 0.5em;
 }
-nav#maptoc {
+nav#maptoc, nav#archive {
     display: table-cell;
     width: 200px;
     padding-right: 10px;
     background-color: #eee;
 }
-nav#maptoc ul {
+nav#maptoc ul, nav#archive ul {
     padding-left: 20px;
     margin: 0;
 }
 article {
     max-width: 800px;
 }
-nav#maptoc li {
+nav#maptoc li, nav#archive li {
     margin: 0.5em 0 0 0;
 }
-article#mapcontent {
+article#mapcontent, article#blogpost {
     display: table-cell;
     padding-left: 30px;
 }

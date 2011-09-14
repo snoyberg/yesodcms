@@ -25,3 +25,8 @@
 /feed BlogFeedR GET
 /news ContentFeedR GET
 /news/item/#FeedItemId ContentFeedItemR GET
+
+/blog BlogR GET
+/blog/#BlogSlugT BlogPostNoDateR GET
+/blog/#Int/#Month/#BlogSlugT BlogPostR GET
+/blog/create/#Text CreateBlogR POST

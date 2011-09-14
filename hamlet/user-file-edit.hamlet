@@ -1,0 +1,10 @@
+$if canWrite
+    <p>
+        <a href=@{EditPageR ts'}>Edit
+    $maybe blogPost <- mblogPost
+        <form method=post action=@{fst blogPost}>
+            <table>
+                ^{snd blogPost}
+                <tr>
+                    <td colspan=3>
+                        <input type=submit value="Post to blog">

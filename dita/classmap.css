@@ -72,6 +72,7 @@ topic/tgroup { display: stripped; }
 topic/dlentry { display: stripped; }
 topic/dlhead { display: stripped; }
 topic/body { display: stripped; }
+topic/abstract { display: stripped; }
 
 topic/colspec { display: deleted; }
 topic/indexterm { display: deleted; }

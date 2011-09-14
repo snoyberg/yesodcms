@@ -24,3 +24,12 @@ FeedItem
     url Text
     content Html
     deriving
+Blog
+    posted UTCTime
+    contents FileStorePath
+    slug BlogSlugT Eq
+    year Int
+    month Month
+    author UserId
+    title Text
+    UniqueBlog year month slug

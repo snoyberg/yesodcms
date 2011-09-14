@@ -30,12 +30,16 @@ htmlFormatHandler = FormatHandler
     { fhExts = Set.singleton "html"
     , fhName = "HTML"
     , fhForm = renderTable . areq alohaHtmlField "Content"
-    , fhWidget = \sm uri -> do
-        t <- liftIO $ uriToText sm uri
-        toWidget $ preEscapedText t
+    , fhWidget = widget
     , fhFilter = Just . enumList 8 . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
     , fhRefersTo = const $ const $ return []
+    , fhTitle = \_ _ -> return Nothing
+    , fhFlatWidget = widget
     }
+  where
+    widget sm uri = do
+        t <- liftIO $ uriToText sm uri
+        toWidget $ preEscapedText t
 
 class YesodAloha a where
     urlAloha :: a -> Either (Route a) T.Text

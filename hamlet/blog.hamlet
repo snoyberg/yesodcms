@@ -1,0 +1,21 @@
+<nav #archive>
+    <ul>
+        $forall year <- archive
+            <li>
+                #{show $ fst year}
+                <ul>
+                    $forall month <- snd year
+                        <li>
+                            #{prettyMonth $ fst month}
+                            <ul>
+                                $forall entry <- snd month
+                                    <li>
+                                        <a title=#{eDate entry} href=@{eLink entry}>#{eTitle entry}
+<article #blogpost>
+    <h1>#{title}
+    <h2 .date>#{prettyDateTime $ blogPosted b}
+    <p .author>
+        <img alt=Avatar src=#{gravatarImg (userEmail u) opts}
+        $maybe n <- userName u
+            \ #{n}
+    ^{widget}

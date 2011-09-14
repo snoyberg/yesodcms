@@ -23,13 +23,16 @@ textFormatHandler = FormatHandler
              . renderTable
              . areq textareaField "Content"
              . fmap Textarea
-    , fhWidget = \sm uri -> do
+    , fhWidget = widget
+    , fhFlatWidget = widget
+    , fhFilter = Just . enumList 8 . L.toChunks
+    , fhRefersTo = const $ const $ return []
+    , fhTitle = \_ _ -> return Nothing
+    }
+  where
+    css = [lucius|textarea { width: 500px; height: 400px } |]
+    widget sm uri = do
         id' <- lift newIdent
         t <- liftIO $ uriToText sm uri
         toWidget [lucius|##{id'} { white-space: pre }|]
         toWidget [shamlet|<div ##{id'}>#{t}|]
-    , fhFilter = Just . enumList 8 . L.toChunks
-    , fhRefersTo = const $ const $ return []
-    }
-  where
-    css = [lucius|textarea { width: 500px; height: 400px } |]

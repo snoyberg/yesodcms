@@ -16,6 +16,7 @@ module Foundation
     , module Model
     , StaticRoute (..)
     , AuthRoute (..)
+    , fileTitle
     ) where
 
 import Yesod
@@ -42,6 +43,7 @@ import FormatHandler.Html
 import FileStore
 import Data.Map (Map)
 import Yesod.AtomFeed
+import Data.Maybe (fromMaybe)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -201,6 +203,11 @@ instance YesodBreadcrumbs Cms where
     breadcrumb (UserFileR user []) = return (user, Just UsersR)
     breadcrumb (UserFileR user x) = return (last x, Just $ UserFileR user $ init x)
 
+    breadcrumb BlogR = return ("Blog", Just RootR)
+    breadcrumb (BlogPostR year month slug) = do
+        (_, b) <- runDB $ getBy404 $ UniqueBlog year month slug
+        return (blogTitle b, Just BlogR)
+
     breadcrumb StaticR{} = return ("", Nothing)
     breadcrumb AuthR{} = return ("", Nothing)
     breadcrumb FaviconR{} = return ("", Nothing)
@@ -212,3 +219,22 @@ instance YesodBreadcrumbs Cms where
     breadcrumb BlogFeedR = return ("", Nothing)
     breadcrumb ContentFeedR = return ("", Nothing)
     breadcrumb ContentFeedItemR{} = return ("", Nothing)
+    breadcrumb BlogPostNoDateR{} = return ("", Nothing)
+    breadcrumb CreateBlogR{} = return ("", Nothing)
+
+fileTitle :: FileStorePath -> GHandler sub Cms T.Text
+fileTitle t = do
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    let ext = snd $ T.breakOnEnd "." t
+    let mfh = findHandler ext fhs
+    muri <- liftIO $ fsGetFile fs t
+    mtitle <-
+        case (mfh, muri) of
+            (Just fh, Just uri) -> liftIO $ fhTitle fh (fsSM fs) uri
+            _ -> return Nothing
+    return $ fromMaybe backup mtitle
+  where
+    backup = safeInit $ fst $ T.breakOnEnd "." $ snd $ T.breakOnEnd "/" t
+    safeInit s
+        | T.null s = s
+        | otherwise = T.init s

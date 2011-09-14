@@ -48,7 +48,16 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = xmlForm "Content"
-    , fhWidget = \sm uri -> do
+    , fhWidget = widget
+    , fhFlatWidget = widget
+    , fhFilter = xmlFilter
+    , fhRefersTo = const $ const $ return []
+    , fhTitle = \sm uri -> fmap (either (const Nothing) id) $ runDITA cache sm (Just loadFileId) $ do
+        tts <- loadTopicTrees uri
+        return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts
+    }
+  where
+    widget sm uri = do
         ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
@@ -73,9 +82,6 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
             Right (title, nodes) -> do
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
-    , fhFilter = xmlFilter
-    , fhRefersTo = const $ const $ return []
-    }
 
 ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      => (Href -> T.Text)
@@ -98,39 +104,11 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
         let root = maybe "" (r . tm) mcr
 
         ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
-            let ri topic = RenderInfo
-                    { riTopic = topic
-                    , riMisc = def
-                        { hsClassMap = classmap
-                        , hsGoElem = goElem
-                        }
-                    , riParent = Nothing
-                    , riChildren = []
-                    , riRelTable = []
-                    , riGetLinkText = const "<Link text not enabled yet>"
-                    , riRenderNav = const Nothing
-                    , riRenderHref = renderHref'
-                    }
-            docCache <- liftIO $ readIORef idocCache
-            mdoc <-
-                case Map.lookup uri docCache of
-                    Nothing -> return Nothing
-                    Just (toUpdate, doc) -> do
-                        now <- liftIO getCurrentTime
-                        return $ if now > toUpdate then Nothing else Just doc
-            doc <-
-                case mdoc of
-                    Nothing -> do
-                        doc <- loadDoc uri
-                        now <- liftIO getCurrentTime
-                        let toUpdate = addUTCTime (60 * 5) now
-                        liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri (toUpdate, doc) m, ()))
-                        return doc
-                    Just doc -> return doc
+            doc <- cacheLoad uri
 
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
                 Nothing -> (docTitle doc, wrapper Nothing (showNavs root (docNavs doc)) [])
-                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav ri nav))
+                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav makeRi nav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
             Right (title, nodes) -> do
@@ -144,8 +122,44 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
             Right doc -> do
                 let navPairs = concatMap deepPairs $ docNavs doc
                 return $ concatMap (\(nav, tt) -> map (\uri' -> (uri', toNavRoute uri nav)) $ Set.toList $ deepTTFiles tt) navPairs
+    , fhTitle = \sm uri -> fmap (either (const Nothing) Just) $ runDITA cache sm (Just loadFileId) $ fmap docTitle $ cacheLoad uri
+    , fhFlatWidget = \sm uri -> do
+        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ cacheLoad uri
+        case ex of
+            Left e -> toWidget [shamlet|<p>Error parsing DITA map: #{show e}|]
+            Right doc -> toWidget $ mapM_ toHtml $ concatMap (showNavsDeep makeRi) $ docNavs doc
     }
   where
+    makeRi topic = RenderInfo
+        { riTopic = topic
+        , riMisc = def
+            { hsClassMap = classmap
+            , hsGoElem = goElem
+            }
+        , riParent = Nothing
+        , riChildren = []
+        , riRelTable = []
+        , riGetLinkText = const "<Link text not enabled yet>"
+        , riRenderNav = const Nothing
+        , riRenderHref = renderHref'
+        }
+    cacheLoad uri = do
+        docCache <- liftIO $ readIORef idocCache
+        mdoc <-
+            case Map.lookup uri docCache of
+                Nothing -> return Nothing
+                Just (toUpdate, doc) -> do
+                    now <- liftIO getCurrentTime
+                    return $ if now > toUpdate then Nothing else Just doc
+        case mdoc of
+            Nothing -> do
+                doc <- loadDoc uri
+                now <- liftIO getCurrentTime
+                let toUpdate = addUTCTime (60 * 5) now
+                liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri (toUpdate, doc) m, ()))
+                return doc
+            Just doc -> return doc
+
     deepPairs nav = maybeToList (navTopicTree nav) ++ concatMap deepPairs (navChildren nav)
     deepTTFiles tt = Set.unions $ ttFiles tt : map deepTTFiles (ttChildren tt)
     wrapper mtitle toc content = [xml|
@@ -170,6 +184,15 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
 |]
     showNav ri Nav { navTopicTree = Just (_, tt) } = renderTopicTree ri tt
     showNav _ _ = []
+
+    showNavsDeep ri nav = [xml|
+<h1>#{navTitle nav}
+$maybe tt <- navTopicTree nav
+    ^{renderTopicTree ri $ snd tt}
+$forall nav <- navChildren nav
+    <section .subtopic>
+        ^{showNavsDeep ri nav}
+|]
 
 xmlForm :: (RenderMessage master FormMessage, RenderMessage master msg)
         => FieldSettings msg -> Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())

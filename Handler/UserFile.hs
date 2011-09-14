@@ -5,6 +5,7 @@ module Handler.UserFile
     , getUserFileR
     , postUserFileR
     , getRedirectorR
+    , postCreateBlogR
     ) where
 
 import Foundation
@@ -12,7 +13,7 @@ import qualified Data.Text as T
 import Data.Monoid (mempty)
 import FileStore
 import FormatHandler
-import Control.Monad (unless, when)
+import Control.Monad (unless)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe)
@@ -29,6 +30,7 @@ import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
 import Yesod.Goodies.Gravatar
+import Data.Time
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -50,8 +52,8 @@ getUserFileIntR uid' ts = do
 getUserFileR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileR user ts = do
     (uid, _) <- runDB $ getBy404 $ UniqueHandle user
-    muid <- maybeAuthId
-    let canWrite = Just uid == muid
+    mu <- maybeAuth
+    let canWrite = Just uid == fmap fst mu
     let ts' = "home" : toSinglePiece uid : ts
     let t = T.intercalate "/" ts'
     Cms { fileStore = fs, formatHandlers = fhs, rawFiles } <- getYesod
@@ -77,11 +79,65 @@ getUserFileR user ts = do
                             fh <- maybe notFound return $ findHandler ext fhs
                             defaultLayout $ do
                                 fhWidget fh (fsSM fs) enum
-                                when canWrite $ toWidget [hamlet|
-<p>
-    <a href=@{EditPageR ts'}>Edit
-|]
+                                mblogPost <-
+                                    case mu of
+                                        Just (_, u)
+                                            | userAdmin u -> fmap Just $ do
+                                                let url = CreateBlogR t
+                                                ((_, widget), _) <- lift $ runFormPost blogForm
+                                                return (url, widget)
+                                        _ -> return Nothing
+                                $(widgetFile "user-file-edit")
                         Just (_, canon) -> redirectText RedirectTemporary $ canonPathRedirect canon
+
+blogForm :: Html -> Form Cms Cms (FormResult T.Text, Widget)
+blogForm =
+    renderTable $ areq (checkM validSlug textField) "Blog slug" Nothing
+  where
+    validSlug :: T.Text -> GGHandler Cms Cms IO (Either T.Text T.Text)
+    validSlug slug'
+        | T.any invalidChar slug' = return $ Left "Slug must be lowercase letters, numbers and hyphens"
+        | otherwise = do
+            let slug = BlogSlugT slug'
+            (year, month) <- liftIO currYearMonth
+            x <- runDB $ getBy $ UniqueBlog year month slug
+            case x of
+                Nothing -> return $ Right slug'
+                Just{} -> return $ Left "Slug already in use, please try again"
+    invalidChar c
+        | 'a' <= c && c <= 'z' = False
+        | '0' <= c && c <= '9' = False
+        | c == '-' = False
+        | otherwise = True
+
+currYearMonth :: IO (Int, Month)
+currYearMonth = do
+    now <- getCurrentTime
+    let (year, month, _) = toGregorian $ utctDay now
+    return (fromInteger year, Month month)
+
+postCreateBlogR :: T.Text -> Handler RepHtml
+postCreateBlogR t = do
+    (uid, u) <- requireAuth
+    unless (userAdmin u) $ permissionDenied "Only admins can make blog posts"
+    ((res, widget), _) <- runFormPost blogForm
+    case res of
+        FormSuccess slug' -> do
+            let slug = BlogSlugT slug'
+            now <- liftIO getCurrentTime
+            (year, month) <- liftIO $ currYearMonth
+            title <- fileTitle t
+            _ <- runDB $ insert $ Blog now t slug year month uid title
+            setMessage "Blog post created"
+            redirect RedirectTemporary $ BlogPostR year month slug
+        _ -> defaultLayout [whamlet|
+<form method=post>
+    <table>
+        ^{widget}
+        <tr>
+            <td colspan=3>
+                <input type=submit value="Create blog post">
+|]
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do

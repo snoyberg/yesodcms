@@ -1,5 +1,6 @@
 $(function(){
-    $.each($(".hascomments"), function(i, e){
+    if($("article#blogpost").length) return; // no comments on blog posts
+    $.each($(".hascomments[id]"), function(i, e){
         var x = $(e);
 
         // Add the paragraph links

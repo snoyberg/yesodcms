@@ -3,6 +3,7 @@ module Handler.Comments
     ( getCommentsR
     , postCommentsR
     , getCommentCountR
+    , prettyDateTime
     ) where
 
 import Foundation
