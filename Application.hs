@@ -26,14 +26,17 @@ import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
 import qualified Text.XML.Catalog as C
 import DITA.Types (hrefFile, NavId (..), FileId (..))
+import qualified DITA.Types as D
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W
 import Data.Text.Encoding (encodeUtf8)
 import Control.Monad (join)
 import qualified Network.HTTP.Types as H
-import qualified Data.ByteString as S
 import qualified Data.Text as T
+import Blaze.ByteString.Builder (toByteString)
+import Data.Text.Encoding (decodeUtf8With)
+import Data.Text.Encoding.Error (lenientDecode)
 
 #ifndef WINDOWS
 import qualified System.Posix.Signals as Signal
@@ -114,15 +117,19 @@ book app req =
             }
         ["book", nav] -> app req
             { W.pathInfo = ["home", "snoyberg", "sample", "map-1.ditamap"]
-            , W.queryString = [("nav", Just $ encodeUtf8 nav)]
+            , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
             }
         ["home", "snoyberg", "sample", "map-1.ditamap"] ->
             case join $ lookup "nav" $ W.queryString req of
-                Nothing -> redir ["book"]
-                Just nav -> redir ["book", nav]
+                Nothing -> redir ["book"] $ W.queryString req
+                Just nav -> redir ["book", decodeUtf8With lenientDecode nav] noNav
         _ -> app req
   where
-    redir ps = return $ W.responseLBS H.status301 [("Location", S.concat $ concatMap (\x -> ["/", x]) ps)] ""
+    redir ps qs =
+        return $ W.responseLBS H.status301 [("Location", toByteString path)] ""
+      where
+        path = H.encodePath ps qs
+    noNav = filter (\(x, _) -> x /= "nav") $ W.queryString req
 
 -- for yesod devel
 withDevelAppPort :: Dynamic
@@ -140,8 +147,8 @@ withDevelAppPort =
       where
         logHandle logger msg = logLazyText logger msg >> flushLogger logger
 
-toNavRoute :: URI -> NavId -> (CmsRoute, [(T.Text, T.Text)])
-toNavRoute uri (NavId nid) = (RedirectorR (uriPath uri), [("nav", nid)])
+toNavRoute :: URI -> NavId -> D.FileId -> D.TopicId -> (CmsRoute, [(T.Text, T.Text)])
+toNavRoute uri (NavId nid) (D.FileId fid) (D.TopicId tid) = (RedirectorR (uriPath uri), [("nav", nid), ("topic", T.concat [fid, "-", tid])])
 
 loadFileId :: Settings.ConnectionPool -> URI -> IO FileId
 loadFileId p uri = flip Settings.runConnectionPool p $ do

@@ -64,6 +64,7 @@ getUserFileR user ts = do
             let folders = map fst $ filter snd contents
             let files = map fst $ filter (not . snd) contents
             let link x = UserFileR user $ ts ++ [x]
+                editLink x = EditPageR $ ts' ++ [x]
             let formats = zip [0 :: Int ..] $ map fhName fhs
             defaultLayout $(widgetFile "user-folder")
         Just enum -> do

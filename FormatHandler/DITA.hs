@@ -18,7 +18,7 @@ import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import qualified Text.XML.Catalog as C
-import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, ttFiles, topicContent)
+import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, topicContent)
 import DITA.Util (text)
 import Control.Monad (unless)
 import Yesod.Core
@@ -38,6 +38,12 @@ import qualified DITA.Types as D
 import Data.IORef
 import Network.URI.Enumerator (URI)
 import Data.Time
+import qualified Network.HTTP.Types as H
+import Control.Arrow (second)
+import Blaze.ByteString.Builder.Char.Utf8 (fromChar, fromText)
+import Data.Monoid (mconcat)
+import Data.Text.Encoding (decodeUtf8)
+import Blaze.ByteString.Builder (toByteString)
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -108,13 +114,23 @@ ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      -> ClassMap
                      -> (URI -> IO D.FileId)
                      -> IORef (Map.Map URI (UTCTime, Doc))
-                     -> (URI -> NavId -> (Route master, [(T.Text, T.Text)]))
+                     -> (URI -> NavId -> D.FileId -> D.TopicId -> (Route master, [(T.Text, T.Text)]))
                      -> FormatHandler master
 ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
     , fhWidget = \sm uri -> do
+        mtopic <- lift $ runInputGet $ iopt textField "topic"
+        case mtopic of
+            Nothing -> return ()
+            Just topic -> do
+                gets <- fmap (filter (\(x, _) -> x /= "topic")) $ lift $ reqGetParams `fmap` getRequest
+                lift $ redirectText RedirectPermanent $ decodeUtf8 $ toByteString $ mconcat
+                    [ H.renderQueryText True $ map (second Just) gets
+                    , fromChar '#'
+                    , fromText topic
+                    ]
         mnavid <- lift $ runInputGet $ iopt textField "nav"
 
         r <- lift getUrlRender
@@ -135,12 +151,13 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter
     , fhRefersTo = \sm uri -> do
-        edoc <- withFileLoader $ \l -> runDITA cache sm (Just l) $ loadDoc uri
+        edoc <- runDITA cache sm (Just loadFileId) $ loadDoc uri
         case edoc of
             Left{} -> return []
             Right doc -> do
                 let navPairs = concatMap deepPairs $ docNavs doc
-                return $ concatMap (\(nav, tt) -> map (\uri' -> (uri', toNavRoute uri nav)) $ Set.toList $ deepTTFiles tt) navPairs
+                let go nav topic = (D.topicSource topic, toNavRoute uri nav (D.topicFileId topic) (D.topicId topic))
+                return $ concatMap (\(nav, tt) -> map (go nav) $ deepTopics tt) navPairs
     , fhTitle = \sm uri -> fmap (either (const Nothing) Just) $ runDITA cache sm (Just loadFileId) $ fmap docTitle $ cacheLoad uri
     , fhFlatWidget = \sm uri -> do
         ex <- liftIO $ runDITA cache sm (Just loadFileId) $ cacheLoad uri
@@ -181,7 +198,9 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
             Just doc -> return doc
 
     deepPairs nav = maybeToList (navTopicTree nav) ++ concatMap deepPairs (navChildren nav)
-    deepTTFiles tt = Set.unions $ ttFiles tt : map deepTTFiles (ttChildren tt)
+
+    deepTopics tt = ttTopic tt : concatMap deepTopics (ttChildren tt)
+
     wrapper mtitle toc content = [xml|
 <nav id=maptoc>
     ^{toc}
@@ -277,9 +296,6 @@ xmlFilter lbs =
     case parseLBS def lbs of
         Left{} -> Nothing
         Right (Document a root b) -> Just $ renderBytes def $ Document a (fixIds root) b
-
-withFileLoader :: a
-withFileLoader = undefined
 
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
 goElem _ _ _ = Nothing
