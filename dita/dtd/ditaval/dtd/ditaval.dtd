@@ -1,4 +1,4 @@
-<?xml encoding="utf-8"?>
+
 <!-- ============================================================= -->
 <!--                    HEADER                                     -->
 <!-- ============================================================= -->
@@ -12,8 +12,8 @@
 <!--                    PUBLIC DOCUMENT TYPE DEFINITION            -->
 <!--                    TYPICAL INVOCATION                         -->
 <!--                                                               -->
-<!--  Refer to this file by the following public identifier or an 
-      appropriate system identifier 
+<!--  Refer to this file by the following public identifier or an
+      appropriate system identifier
 PUBLIC "-//OASIS//DTD DITA DITAVAL//EN"
       Delivered as file "ditaval.dtd"                              -->
 
@@ -35,7 +35,6 @@ PUBLIC "-//OASIS//DTD DITA 1.2 DITAVAL//EN"                        -->
 <!--  UPDATES:                                                     -->
 <!-- ============================================================= -->
 
-
 <!ELEMENT val (style-conflict?, (prop | revprop)*)>
 
 <!ELEMENT style-conflict EMPTY>
@@ -43,7 +42,6 @@ PUBLIC "-//OASIS//DTD DITA 1.2 DITAVAL//EN"                        -->
   foreground-conflict-color CDATA #IMPLIED
   background-conflict-color CDATA #IMPLIED
 >
-
 
 <!ELEMENT prop (startflag?, endflag?)>
 <!ATTLIST prop
