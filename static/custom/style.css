@@ -89,3 +89,18 @@ div.excerpt {
     font-size: 0.8em;
     margin-left: 0.5em;
 }
+table {
+    border-collapse: collapse;
+}
+td, th {
+    padding: 0.4em;
+    border: 1px solid #999;
+}
+thead {
+    font-weight: bold;
+    background-color: #ccc;
+}
+caption {
+    font-weight: bold;
+    font-size: 1.2em;
+}
