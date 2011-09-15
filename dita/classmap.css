@@ -73,11 +73,15 @@ topic/dlentry { display: stripped; }
 topic/dlhead { display: stripped; }
 topic/body { display: stripped; }
 topic/abstract { display: stripped; }
+topic/prolog { display: stripped; }
 
 topic/colspec { display: deleted; }
 topic/indexterm { display: deleted; }
 topic/draft-comment { display: deleted; }
 topic/data { display: deleted; }
+topic/metadata { display: deleted; }
+topic/category { display: deleted; }
+topic/keywords { display: deleted; }
 
 /* FIXME We need better support for this */
 topic/related-links { display: deleted; }
