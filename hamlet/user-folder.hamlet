@@ -37,3 +37,9 @@ $if canWrite
             <input type=file name=zip>
             \ #
             <input type=submit value=Upload>
+    <form method=post>
+        <p>
+            Download the ZIP file from: #
+            <input type=url name=url value="http://">
+            \ #
+            <input type=submit value="Get it">

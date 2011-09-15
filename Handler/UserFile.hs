@@ -31,6 +31,7 @@ import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
 import Yesod.Goodies.Gravatar
 import Data.Time
+import Network.HTTP.Enumerator
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -146,41 +147,50 @@ postUserFileR user ts = do
     (uid, _) <- runDB $ getBy404 $ UniqueHandle user
     muid <- maybeAuthId
     unless (Just uid == muid) $ permissionDenied "Only the owner can edit these files"
-    Cms { fileStore = fs, formatHandlers = fhs, rawFiles } <- getYesod
-    (_, files) <- runRequestBody
+    Cms { fileStore = fs, formatHandlers = fhs, rawFiles = rfs } <- getYesod
+    (posts, files) <- runRequestBody
     case lookup "zip" files of
         Nothing -> do
-            mfolder <- runInputPost $ iopt textField "folder"
-            case mfolder of
-                Just folder -> do
-                    let ts' = ts ++ [folder]
-                        t = T.intercalate "/" $ "home" : toSinglePiece uid : ts'
-                    liftIO $ fsMkdir fs t
-                    setMessage "Folder created"
-                    redirect RedirectTemporary $ UserFileR user ts'
+            case lookup "url" posts of
                 Nothing -> do
-                    (file, formatNum) <- runInputPost $ (,) <$> ireq textField "file" <*> ireq intField "format"
-                    format <- maybe (invalidArgs ["Incorrect format"]) return $ atMay formatNum fhs
-                    ext <- maybe (error "All FormatHandlers need at least one extension") return
-                         $ listToMaybe $ Set.toList $ fhExts format
-                    redirect RedirectTemporary $ EditPageR $ "home" : toSinglePiece uid : ts ++ [T.concat [file, ".", ext]]
-        Just fi -> do
-            -- zip-archive uses async exceptions... oh joy
-            -- Use spoon to make sure we don't 500 on bad input
-            let archive = toArchive $ fileContent fi
-            case spoon $ length $ zEntries archive of
-                Nothing -> do
-                    setMessage "Invalid ZIP file"
-                Just{} -> do
-                    let toPath e = T.intercalate "/" $ "home" : toSinglePiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
-                    (updated, nu) <- execWriterT $ mapM_ (upload fs rawFiles fhs toPath) $ zEntries archive
-                    runDB $ mapM_ setCanons $ Set.toList updated
-                    setMessage $
-                        if Set.null nu
-                            then "ZIP file uploaded successfully"
-                            else toHtml $ "The following files could not be uploaded: " `T.append` (T.intercalate ", " $ Set.toList nu)
-            redirect RedirectTemporary $ UserFileR user ts
+                    mfolder <- runInputPost $ iopt textField "folder"
+                    case mfolder of
+                        Just folder -> do
+                            let ts' = ts ++ [folder]
+                                t = T.intercalate "/" $ "home" : toSinglePiece uid : ts'
+                            liftIO $ fsMkdir fs t
+                            setMessage "Folder created"
+                            redirect RedirectTemporary $ UserFileR user ts'
+                        Nothing -> do
+                            (file, formatNum) <- runInputPost $ (,) <$> ireq textField "file" <*> ireq intField "format"
+                            format <- maybe (invalidArgs ["Incorrect format"]) return $ atMay formatNum fhs
+                            ext <- maybe (error "All FormatHandlers need at least one extension") return
+                                 $ listToMaybe $ Set.toList $ fhExts format
+                            redirect RedirectTemporary $ EditPageR $ "home" : toSinglePiece uid : ts ++ [T.concat [file, ".", ext]]
+                Just url ->
+                    case parseUrl $ T.unpack url of
+                        Nothing -> invalidArgs ["Invalid URL: " `T.append` url]
+                        Just req -> do
+                            res <- liftIO $ withManager $ httpLbsRedirect req -- FIXME put in some DoS prevention
+                            uploadZipLbs uid fs fhs rfs $ responseBody res
+        Just fi -> uploadZipLbs uid fs fhs rfs $ fileContent fi
   where
+    uploadZipLbs uid fs fhs rfs lbs = do
+        -- zip-archive uses async exceptions... oh joy
+        -- Use spoon to make sure we don't 500 on bad input
+        let archive = toArchive lbs
+        case spoon $ length $ zEntries archive of
+            Nothing -> do
+                setMessage "Invalid ZIP file"
+            Just{} -> do
+                let toPath e = T.intercalate "/" $ "home" : toSinglePiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
+                (updated, nu) <- execWriterT $ mapM_ (upload fs rfs fhs toPath) $ zEntries archive
+                runDB $ mapM_ setCanons $ Set.toList updated
+                setMessage $
+                    if Set.null nu
+                        then "ZIP file uploaded successfully"
+                        else toHtml $ "The following files could not be uploaded: " `T.append` (T.intercalate ", " $ Set.toList nu)
+        redirect RedirectTemporary $ UserFileR user ts
     atMay :: Int -> [a] -> Maybe a
     atMay _ [] = Nothing
     atMay 0 (x:_) = Just x

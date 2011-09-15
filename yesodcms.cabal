@@ -121,6 +121,7 @@ executable         yesodcms
                  , sphinx
                  , tagsoup
                  , pandoc
+                 , http-enumerator
 
     if !os(windows)
          build-depends: unix
