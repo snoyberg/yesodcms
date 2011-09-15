@@ -70,7 +70,7 @@ getUserFileR user ts = do
             defaultLayout $(widgetFile "user-folder")
         Just enum -> do
             let ext = snd $ T.breakOnEnd "." t
-            case Map.lookup ext $ rawFiles of
+            case Map.lookup (T.toLower ext) $ rawFiles of
                 -- FIXME re-enable sendfile optimization
                 Just mime -> sendResponse (mime, ContentEnum (readURI (fsSM fs) enum $= EL.map fromByteString))
                 Nothing -> do
