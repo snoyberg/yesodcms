@@ -39,11 +39,12 @@ import Data.IORef
 import Network.URI.Enumerator (URI)
 import Data.Time
 import qualified Network.HTTP.Types as H
-import Control.Arrow (second)
 import Blaze.ByteString.Builder.Char.Utf8 (fromChar, fromText)
 import Data.Monoid (mconcat)
 import Data.Text.Encoding (decodeUtf8)
-import Blaze.ByteString.Builder (toByteString)
+import Blaze.ByteString.Builder (toByteString, fromByteString)
+import Network.Wai (rawQueryString, rawPathInfo)
+import Network.HTTP.Types (parseQuery)
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> C.DTDCache IO
@@ -125,9 +126,15 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
         case mtopic of
             Nothing -> return ()
             Just topic -> do
-                gets <- fmap (filter (\(x, _) -> x /= "topic")) $ lift $ reqGetParams `fmap` getRequest
+                -- Due to the redirect middleware messing around with stuff, we
+                -- can't trust the actual queryString (and therefore, the
+                -- reqGetParams). Instead, we need to look at the
+                -- rawQueryString instead.
+                gets <- fmap (filter (\(x, _) -> x /= "topic") . parseQuery . rawQueryString) $ lift waiRequest
+                rpi <- fmap rawPathInfo $ lift waiRequest
                 lift $ redirectText RedirectPermanent $ decodeUtf8 $ toByteString $ mconcat
-                    [ H.renderQueryText True $ map (second Just) gets
+                    [ fromByteString rpi
+                    , H.renderQueryBuilder True gets
                     , fromChar '#'
                     , fromText topic
                     ]
