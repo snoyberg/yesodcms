@@ -67,6 +67,24 @@ article#mapcontent, article#blogpost {
     display: table-cell;
     padding-left: 30px;
 }
+
+/* make things look nice on a mobile */
+@media (max-width: 600px) {
+    nav#archive, nav#maptoc {
+        display: none;
+    }
+    article#mapcontent, article#blogpost {
+        display: block;
+        padding-left: 0;
+    }
+    #topbar div, .home #topbar div {
+        display: none;
+    }
+    #topbar {
+        padding-top: 60px;
+    }
+}
+
 aside {
     margin: 0.5em;
     padding: 0.5em;

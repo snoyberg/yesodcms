@@ -149,8 +149,8 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
             doc <- cacheLoad uri
 
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
-                Nothing -> (docTitle doc, wrapper Nothing (showNavs root (docNavs doc)) [])
-                Just nav -> (navTitle nav, wrapper (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav makeRi nav))
+                Nothing -> (docTitle doc, wrapper False Nothing (showNavs root (docNavs doc)) [])
+                Just nav -> (navTitle nav, wrapper True (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav makeRi nav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
             Right (title, nodes) -> do
@@ -208,8 +208,8 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
 
     deepTopics tt = ttTopic tt : concatMap deepTopics (ttChildren tt)
 
-    wrapper mtitle toc content = [xml|
-<nav id=maptoc>
+    wrapper hasBody mtitle toc content = [xml|
+<nav :hasBody:id=maptoc>
     ^{toc}
 <article id=mapcontent>
     $maybe title <- mtitle

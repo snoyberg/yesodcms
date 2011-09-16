@@ -207,10 +207,10 @@ instance YesodBreadcrumbs Cms where
     breadcrumb (UserFileR user []) = return (user, Just UsersR)
     breadcrumb (UserFileR user x) = return (last x, Just $ UserFileR user $ init x)
 
-    breadcrumb BlogR = return ("Blog", Just RootR)
+    breadcrumb BlogArchiveR = return ("Blog", Just RootR)
     breadcrumb (BlogPostR year month slug) = do
         (_, b) <- runDB $ getBy404 $ UniqueBlog year month slug
-        return (blogTitle b, Just BlogR)
+        return (blogTitle b, Just BlogArchiveR)
 
     breadcrumb SearchR = return ("Search", Just RootR)
 
@@ -228,6 +228,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb BlogPostNoDateR{} = return ("", Nothing)
     breadcrumb CreateBlogR{} = return ("", Nothing)
     breadcrumb SearchXmlpipeR = return ("", Nothing)
+    breadcrumb BlogR = return ("", Nothing)
 
 fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
 fileTitle t = do

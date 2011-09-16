@@ -4,6 +4,7 @@
         <title>#{pageTitle pc}
         <link rel="stylesheet" href=@{StaticR css_normalize_css}>
         <link rel="stylesheet" href=@{StaticR custom_style_css}>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         ^{pageHead pc}
     <body :isHome:.home>
         ^{pageBody pc}

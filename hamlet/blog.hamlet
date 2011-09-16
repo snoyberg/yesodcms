@@ -1,16 +1,5 @@
 <nav #archive>
-    <ul>
-        $forall year <- archive
-            <li>
-                #{show $ fst year}
-                <ul>
-                    $forall month <- snd year
-                        <li>
-                            #{prettyMonth $ fst month}
-                            <ul>
-                                $forall entry <- snd month
-                                    <li>
-                                        <a title=#{eDate entry} href=@{eLink entry}>#{eTitle entry}
+    ^{blogArchive}
 <article #blogpost>
     <h1>#{title}
     <h2 .date>#{prettyDateTime $ blogPosted b}
