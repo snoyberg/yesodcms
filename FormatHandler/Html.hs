@@ -63,7 +63,7 @@ alohaHtmlField = Field
     <textarea ##{theId} name=#{name}>#{showVal val}
 |]
         toWidget [julius|$(function(){$("##{theId}").aloha();})|]
-        toWidget [lucius|##{theId}-container { width: 800px; height: 400px; }|]
+        toWidget [lucius|##{theId}-container { width: 800px; height: 400px; overflow: auto }|]
     }
   where
     showVal = either id id
