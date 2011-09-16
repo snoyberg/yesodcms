@@ -125,6 +125,8 @@ executable         yesodcms
                  , pandoc
                  , http-enumerator
                  , xml-types
+                 , xhtml
+                 , illuminate
 
     if !os(windows)
          build-depends: unix

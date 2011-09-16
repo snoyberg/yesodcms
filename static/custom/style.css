@@ -236,3 +236,13 @@ aside#announcement span.date {
     font-style: italic;
     font-size: 0.8em;
 }
+
+pre.codeblock {
+    background-color: #F6F6F6;
+    overflow:auto;
+    padding: 1em;
+    border:#CCC solid 1px;
+    box-shadow: 0 0 8px #888 inset;
+    font-size: 0.9em;
+    line-height: 1.4em;
+}

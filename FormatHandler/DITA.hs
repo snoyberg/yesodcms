@@ -2,11 +2,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE PatternGuards #-}
 module FormatHandler.DITA
     ( ditaFormatHandler
     , ditamapFormatHandler
     ) where
 
+import Debug.Trace
 import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
@@ -21,7 +23,7 @@ import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
 import Data.DTD.Cache
 import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, topicContent)
-import DITA.Util (text)
+import DITA.Util (text, getAttrText)
 import Control.Monad (unless)
 import Yesod.Core
 import Yesod.Form
@@ -46,6 +48,16 @@ import Data.Text.Encoding (decodeUtf8)
 import Blaze.ByteString.Builder (toByteString, fromByteString)
 import Network.Wai (rawQueryString, rawPathInfo)
 import Network.HTTP.Types (parseQuery)
+
+import qualified Text.Highlighting.Illuminate as I
+import qualified Text.Highlighting.Illuminate.Haskell as Haskell
+import qualified Text.Highlighting.Illuminate.LiterateHaskell as LHaskell
+import qualified Text.Highlighting.Illuminate.HTML as HTML
+import qualified Text.Highlighting.Illuminate.CSS as CSS
+import qualified Text.Highlighting.Illuminate.Javascript as Javascript
+import qualified Text.Highlighting.Illuminate.XML as XML
+import qualified Text.Highlighting.Illuminate.Sh as Sh
+import qualified Text.XHtml
 
 ditaFormatHandler :: (Href -> T.Text)
                   -> DTDCache
@@ -358,8 +370,25 @@ xmlFilter lbs =
         Left{} -> Nothing
         Right (Document a root b) -> Just $ renderBytes def $ Document a (fixIds root) b
 
+highlighters :: Map.Map T.Text I.Lexer
+highlighters = Map.fromList
+    [ ("html", HTML.lexer)
+    , ("hamlet", HTML.lexer)
+    , ("css", CSS.lexer)
+    --, ("lucius", CSS.lexer)
+    , ("xml", XML.lexer)
+    , ("shell", Sh.lexer)
+    , ("julius", Javascript.lexer)
+    , ("javascript", Javascript.lexer)
+    , ("haskell", Haskell.lexer)
+    , ("lhaskell", LHaskell.lexer)
+    ]
+
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
+goElem "pr-d/codeblock" _ e@(D.Element _ _ _ [D.NodeContent t])
+    | Just lexer <- getAttrText "outputclass" e >>= flip Map.lookup highlighters = highlight lexer t
 goElem _ _ _ = Nothing
+
 
 navShortDesc :: Nav -> Maybe D.Element
 navShortDesc Nav { navTopicTree = Just (D.TopicTree { D.ttTopic = D.Topic { topicContent = content } }) } =
@@ -367,3 +396,26 @@ navShortDesc Nav { navTopicTree = Just (D.TopicTree { D.ttTopic = D.Topic { topi
         e:_ -> Just e
         [] -> Nothing
 navShortDesc _ = Nothing
+
+highlight :: I.Lexer -> T.Text -> Maybe [Node]
+highlight lexer t =
+    case I.tokenize (Just lexer) $ T.unpack $ cleanLines t of
+        Left _ -> Nothing
+        Right ts ->
+            case parseText def $ TL.fromChunks
+                [ "<pre class=\"codeblock\">"
+                , T.pack $ Text.XHtml.showHtmlFragment $ I.toXHtmlInline I.defaultOptions ts
+                , "</pre>"
+                ] of
+                Left{} -> Nothing
+                Right (Document _ root _) -> Just [NodeElement root]
+  where
+    cleanLines = T.unlines . starts . map (T.filter (/= '\r')) . T.lines
+    starts ts
+        | "-- START" `elem` ts = let x = starts' False ts in traceShow (ts, x) x
+        | otherwise = traceShow ts ts
+    starts' _ [] = []
+    starts' _ ("-- START":ls) = starts' True ls
+    starts' _ ("-- STOP":ls) = starts' False ls
+    starts' True (l:ls) = l : starts' True ls
+    starts' False (_:ls) = starts' False ls
