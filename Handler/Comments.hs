@@ -65,4 +65,4 @@ postCommentsR = do
     redirectText RedirectTemporary dest
 
 prettyDateTime :: UTCTime -> Text
-prettyDateTime = pack . formatTime defaultTimeLocale "%B %e, %y %l:%M %P"
+prettyDateTime = pack . formatTime defaultTimeLocale "%B %e, %Y %l:%M %P"
