@@ -49,6 +49,8 @@ import Yesod.AtomFeed
 import Data.Maybe (fromMaybe)
 import Control.Monad.IO.Class (MonadIO)
 import Data.IORef (IORef)
+import System.Locale (defaultTimeLocale)
+import Data.Time (formatTime)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -98,6 +100,19 @@ defaultLayoutExtraParents parents' widget = do
     tm <- getRouteToMaster
     cr <- getCurrentRoute
     let isHome = Just RootR == fmap tm cr
+    mannouncement <-
+        if isHome
+            then do
+                mb <- runDB $ selectFirst [] [Desc BlogPosted]
+                case mb of
+                    Nothing -> return Nothing
+                    Just (_, b) -> return $ Just [whamlet|
+Last blog post: #
+<a href=@{BlogR}>#{blogTitle b}
+\ #
+<span .date>#{formatTime defaultTimeLocale "%B %e, %Y" $ blogPosted b}
+|]
+            else return Nothing
     pc <- widgetToPageContent $ do
         setTitle $ toHtml title'
         widget

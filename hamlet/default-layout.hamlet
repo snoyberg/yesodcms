@@ -28,4 +28,6 @@
             #{pageTitle pc}
         $maybe msg <- mmsg
             <div #message>#{msg}
+        $maybe a <- mannouncement
+            <aside #announcement>^{a}
         ^{toWidget $ pageBody pc}

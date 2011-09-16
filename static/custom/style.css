@@ -6,13 +6,16 @@ h1, h2, h3, h4, h5, h6 {
     font-family: Cambria, Georgia, "Droid Serif", "DejaVu Serif", serif;
 }
 #logo a {
-    background: url(logo.gif) no-repeat;
+    background: url(logo.png) no-repeat;
     display: block;
     height: 80px;
     width: 450px;
     float: left;
 }
 #logo a span {
+    display: none;
+}
+.home #topbar #logo {
     display: none;
 }
 #topbar {
@@ -23,6 +26,9 @@ h1, h2, h3, h4, h5, h6 {
     float: right;
     margin: 0 1em;
     padding-left: 0;
+}
+.home #topbar ul {
+    float: none;
 }
 #login p {
     margin: 0;
@@ -70,6 +76,9 @@ nav#maptoc, nav#archive {
     width: 200px;
     padding-right: 10px;
     background-color: #eee;
+    border: 1px solid black;
+    border-radius: 8px;
+    box-shadow: #999 2px 2px;
 }
 nav#maptoc ul, nav#archive ul {
     padding-left: 20px;
@@ -147,4 +156,83 @@ nav li.current > a, nav li.current > a:visited, nav li.current > a:hover {
 
 nav.collapse ul {
     margin: 0;
+}
+
+/* homepage */
+.home #topbar {
+    padding: 0 1em;
+    font-size: 0.9em;
+    background: #333;
+    height: auto;
+}
+
+#topbar, .home #topbar a, .home #topbar a:visited {
+    color: #ccc;
+}
+
+.home #topbar div, .home #topbar ul {
+    display: inline-block;
+    margin: 5px 0;
+    padding-left: 10px;
+}
+body.home {
+    margin: 0;
+    background-color: #E5EEF9;
+}
+.home #breadcrumbs {
+    background: #bbd7f9 url(header.png) no-repeat center top;
+    height: 250px;
+    text-indent: -5000px;
+    margin: 0;
+}
+@media (max-width: 500px) {
+    .home #breadcrumbs {
+        height: 150px;
+    }
+}
+.home article {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.home section {
+    font-size: 1.2em;
+}
+.home h2 {
+    font-weight: normal;
+    text-shadow: #A3B5BA 3px 3px 5px;
+}
+
+@media (min-width: 600px) {
+    .home section {
+        display: table-row;
+        font-size: 1.2em;
+    }
+    .home section > * {
+        display: table-cell;
+    }
+    .home h2 {
+        text-align: right;
+        padding-right: 1.5em;
+        width: 30%;
+    }
+}
+
+p {
+    line-height: 1.4em;
+}
+
+aside#announcement {
+    margin: 0;
+    background: #353948;
+    color: #B84848;
+}
+aside#announcement a, aside#announcement a:visited {
+    color: #B84848;
+    text-decoration: underline;
+    font-weight: bold;
+}
+aside#announcement span.date {
+    font-style: italic;
+    font-size: 0.8em;
 }
