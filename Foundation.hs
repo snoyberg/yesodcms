@@ -98,6 +98,9 @@ instance Yesod Cms where
         mu <- maybeAuth
         (title', parents) <- breadcrumbs
         y <- getYesod
+        tm <- getRouteToMaster
+        cr <- getCurrentRoute
+        let isHome = Just RootR == fmap tm cr
         pc <- widgetToPageContent $ do
             setTitle $ toHtml title'
             $(widgetFile "top-bar")

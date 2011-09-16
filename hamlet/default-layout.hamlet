@@ -5,5 +5,5 @@
         <link rel="stylesheet" href=@{StaticR css_normalize_css}>
         <link rel="stylesheet" href=@{StaticR custom_style_css}>
         ^{pageHead pc}
-    <body>
+    <body :isHome:.home>
         ^{pageBody pc}
