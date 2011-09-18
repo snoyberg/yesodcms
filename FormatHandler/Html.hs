@@ -37,6 +37,7 @@ htmlFormatHandler = FormatHandler
     , fhTitle = \_ _ -> return Nothing
     , fhFlatWidget = widget
     , fhToText = \sm uri -> fmap (Just . plain) $ liftIO $ uriToText sm uri
+    , fhExtraParents = \_ _ -> return []
     }
   where
     widget sm uri = do

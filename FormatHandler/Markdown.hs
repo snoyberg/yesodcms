@@ -30,6 +30,7 @@ markdownFormatHandler = FormatHandler
     , fhRefersTo = const $ const $ return []
     , fhTitle = \_ _ -> return Nothing
     , fhToText = \sm uri -> fmap Just $ liftIO $ uriToText sm uri
+    , fhExtraParents = \_ _ -> return []
     }
   where
     css = [lucius|textarea { width: 500px; height: 400px } |]

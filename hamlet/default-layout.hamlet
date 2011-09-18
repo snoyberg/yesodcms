@@ -5,6 +5,38 @@
         <link rel="stylesheet" href=@{StaticR css_normalize_css}>
         <link rel="stylesheet" href=@{StaticR custom_style_css}>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        ^{pageHead pc}
+        ^{toWidget $ pageHead pc}
     <body :isHome:.home>
-        ^{pageBody pc}
+        <div #topbar>
+            <div>
+                $maybe u <- mu
+                    _{MsgLoggedInAs $ userEmail $ snd u}
+                    \ #
+                    <a href=@{ProfileR}>Profile
+                    \ #
+                    <a href=@{AuthR LogoutR}>_{MsgLogout}
+                $nothing
+                    ^{apLogin authBrowserId' AuthR}
+            <ul>
+                <li>
+                    <a href=@{RootR}book>Book
+                <li>
+                    <a href=@{BlogR}>Blog
+                <li>
+                    <a href=@{UsersR}>Browse
+                <li>
+                    <a href=@{WikiR mempty}>Wiki
+                <li>
+                    <form style=display:inline action=@{SearchR}>
+                        <input type=search name=q placeholder=Search>
+        <nav #breadcrumbs>
+            $forall p <- (++) fixedParents parents'
+                $maybe url <- fst p
+                    <a href=@?{url}>#{snd p}
+                $nothing
+                    \#{snd p}
+                \ &gt; #
+            #{pageTitle pc}
+        $maybe msg <- mmsg
+            <div #message>#{msg}
+        ^{toWidget $ pageBody pc}

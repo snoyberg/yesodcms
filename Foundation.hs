@@ -18,6 +18,7 @@ module Foundation
     , AuthRoute (..)
     , fileTitle
     , fileTitle'
+    , defaultLayoutExtraParents
     ) where
 
 import Yesod
@@ -86,6 +87,27 @@ mkMessage "Cms" "messages" "en"
 -- split these actions into two functions and place them in separate files.
 mkYesodData "Cms" $(parseRoutesFile "config/routes")
 
+defaultLayoutExtraParents :: [(Maybe (CmsRoute, [(T.Text, T.Text)]), T.Text)] -> GWidget sub Cms () -> GHandler sub Cms RepHtml
+defaultLayoutExtraParents parents' widget = do
+    mmsg <- getMessage
+    mu <- maybeAuth
+    (title', parents) <- breadcrumbs
+    let fixedParents = map (\(x, y) -> (Just (x, []), y)) parents
+    y <- getYesod
+    tm <- getRouteToMaster
+    cr <- getCurrentRoute
+    let isHome = Just RootR == fmap tm cr
+    pc <- widgetToPageContent $ do
+        setTitle $ toHtml title'
+        $(widgetFile "top-bar")
+        widget
+        addScriptEither $ urlJqueryJs y
+        $(widgetFile "comments")
+        atomLink BlogFeedR "Blog posts"
+        atomLink ContentFeedR "Site activity"
+    pc' <- widgetToPageContent $(widgetFile "default-layout")
+    hamletToRepHtml $ pageBody pc'
+
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod Cms where
@@ -96,23 +118,7 @@ instance Yesod Cms where
     -- Place the session key file in the config folder
     encryptKey _ = fmap Just $ getKey "config/client_session_key.aes"
 
-    defaultLayout widget = do
-        mmsg <- getMessage
-        mu <- maybeAuth
-        (title', parents) <- breadcrumbs
-        y <- getYesod
-        tm <- getRouteToMaster
-        cr <- getCurrentRoute
-        let isHome = Just RootR == fmap tm cr
-        pc <- widgetToPageContent $ do
-            setTitle $ toHtml title'
-            $(widgetFile "top-bar")
-            widget
-            addScriptEither $ urlJqueryJs y
-            $(widgetFile "comments")
-            atomLink BlogFeedR "Blog posts"
-            atomLink ContentFeedR "Site activity"
-        hamletToRepHtml $(hamletFile "default-layout")
+    defaultLayout = defaultLayoutExtraParents []
 
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticRoot setting in Settings.hs

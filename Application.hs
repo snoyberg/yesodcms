@@ -98,7 +98,7 @@ withCms conf logger f = do
                     , markdownFormatHandler
                     , htmlFormatHandler
                     , ditaFormatHandler renderHref cache classmap (loadFileId p)
-                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toNavRoute
+                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute
                     ] (simpleFileStore "data") raw ialiases
 #ifdef WINDOWS
         toWaiApp h >>= f . book ialiases >> return ()
@@ -155,6 +155,9 @@ withDevelAppPort =
         flushLogger logger
       where
         logHandle logger msg = logLazyText logger msg >> flushLogger logger
+
+toDocRoute :: URI -> CmsRoute
+toDocRoute uri = RedirectorR $ uriPath uri
 
 toNavRoute :: URI -> NavId -> D.FileId -> D.TopicId -> (CmsRoute, [(T.Text, T.Text)])
 toNavRoute uri (NavId nid) (D.FileId fid) (D.TopicId tid) = (RedirectorR (uriPath uri), [("nav", nid), ("topic", T.concat [fid, "-", tid])])

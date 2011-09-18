@@ -63,6 +63,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
         tts <- loadTopicTrees uri
         return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts
     , fhToText = \sm uri -> fmap (either (const Nothing) (Just . plain)) $ runDITA cache sm (Just loadFileId) $ loadTopicTrees uri
+    , fhExtraParents = \_ _ -> return []
     }
   where
     -- Convert a list of topic trees to plain text, used for the search index
@@ -98,6 +99,8 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
                     , riGetLinkText = const "<Link text not enabled yet>"
                     , riRenderNav = const Nothing
                     , riRenderHref = renderHref'
+                    , riPrevious = Nothing
+                    , riNext = Nothing
                     }
             let nodes = concatMap (renderTopicTree ri) tts
             let title = maybe "" (text . topicTitle . ttTopic)
@@ -115,9 +118,10 @@ ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      -> ClassMap
                      -> (URI -> IO D.FileId)
                      -> IORef (Map.Map URI (UTCTime, Doc))
+                     -> (URI -> Route master)
                      -> (URI -> NavId -> D.FileId -> D.TopicId -> (Route master, [(T.Text, T.Text)]))
                      -> FormatHandler master
-ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute = FormatHandler
+ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute toNavRoute = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
@@ -172,8 +176,31 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
             Left e -> toWidget [shamlet|<p>Error parsing DITA map: #{show e}|]
             Right doc -> toWidget $ mapM_ toHtml $ concatMap (showNavsDeep makeRi) $ docNavs doc
     , fhToText = const $ const $ return Nothing
+    , fhExtraParents = \sm uri -> do
+        mnavid <- runInputGet $ iopt textField "nav"
+        case mnavid of
+            Nothing -> return []
+            Just navid -> do
+                edoc <- liftIO $ runDITA cache sm (Just loadFileId) $ loadDoc uri
+                case edoc of
+                    Left{} -> return []
+                    Right doc -> return $ showNavParents uri (NavId navid) doc
     }
   where
+
+    --showNavParents :: URI -> NavId -> Doc -> [(Maybe (Route master, [(T.Text, T.Text)]), T.Text)]
+    showNavParents uri navid doc =
+        (Just (toDocRoute uri, []), docTitle doc) :
+        case Map.lookup navid $ docNavMap doc of
+            Just nav -> concatMap showNavParents' $ navParents nav
+            Nothing -> []
+      where
+        showNavParents' (Left title) = [(Nothing, title)]
+        showNavParents' (Right navid') =
+            case Map.lookup navid' $ docNavMap doc of
+                Just nav -> [(Just $ toNavRoute uri navid' (D.FileId "") (D.TopicId ""), navTitle nav)]
+                Nothing -> []
+
     makeRi topic = RenderInfo
         { riTopic = topic
         , riMisc = def
@@ -186,6 +213,8 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toNavRoute 
         , riGetLinkText = const "<Link text not enabled yet>"
         , riRenderNav = const Nothing
         , riRenderHref = renderHref'
+        , riPrevious = Nothing
+        , riNext = Nothing
         }
     cacheLoad uri = do
         docCache <- liftIO $ readIORef idocCache

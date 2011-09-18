@@ -82,7 +82,8 @@ getUserFileR user ts = do
                     case mcanon of
                         Nothing -> do
                             fh <- maybe notFound return $ findHandler ext fhs
-                            defaultLayout $ do
+                            parents' <- fhExtraParents fh (fsSM fs) enum
+                            defaultLayoutExtraParents parents' $ do
                                 fhWidget fh (fsSM fs) enum
                                 mblogPost <-
                                     case mu of
