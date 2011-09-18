@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TupleSections #-}
 module FormatHandler.DITA
     ( ditaFormatHandler
     , ditamapFormatHandler
@@ -192,13 +193,17 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
     showNavParents uri navid doc =
         (Just (toDocRoute uri, []), docTitle doc) :
         case Map.lookup navid $ docNavMap doc of
-            Just nav -> concatMap showNavParents' $ navParents nav
+            Just nav -> reverse $ concatMap showNavParents' $ navParents nav
             Nothing -> []
       where
-        showNavParents' (Left title) = [(Nothing, title)]
-        showNavParents' (Right navid') =
+        showNavParents' navid' =
             case Map.lookup navid' $ docNavMap doc of
-                Just nav -> [(Just $ toNavRoute uri navid' (D.FileId "") (D.TopicId ""), navTitle nav)]
+                Just nav ->
+                    let route =
+                            case navTopicTree nav of
+                                Just {} -> Just $ toNavRoute uri navid' (D.FileId "") (D.TopicId "")
+                                Nothing -> Nothing
+                     in [(route, navTitle nav)]
                 Nothing -> []
 
     makeRi topic = RenderInfo
@@ -233,7 +238,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
                 return doc
             Just doc -> return doc
 
-    deepPairs nav = maybeToList (navTopicTree nav) ++ concatMap deepPairs (navChildren nav)
+    deepPairs nav = maybeToList (fmap (navId nav,) $ navTopicTree nav) ++ concatMap deepPairs (navChildren nav)
 
     deepTopics tt = ttTopic tt : concatMap deepTopics (ttChildren tt)
 
@@ -250,20 +255,20 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
 <ul>
     $forall nav <- navs
         <li>
-            $maybe ntt <- navTopicTree nav
-                <a href="#{root}?nav=#{unNavId $ fst ntt}">
+            $maybe _ <- navTopicTree nav
+                <a href="#{root}?nav=#{unNavId $ navId nav}">
                     \#{navTitle nav}
             $nothing
                 \#{navTitle nav}
             ^{showNavs root $ navChildren nav}
 |]
-    showNav ri Nav { navTopicTree = Just (_, tt) } = renderTopicTree ri tt
+    showNav ri Nav { navTopicTree = Just tt } = renderTopicTree ri tt
     showNav _ _ = []
 
     showNavsDeep ri nav = [xml|
 <h1>#{navTitle nav}
 $maybe tt <- navTopicTree nav
-    ^{renderTopicTree ri $ snd tt}
+    ^{renderTopicTree ri tt}
 $forall nav <- navChildren nav
     <section .subtopic>
         ^{showNavsDeep ri nav}
