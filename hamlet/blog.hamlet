@@ -1,4 +1,4 @@
-<nav #archive>
+<nav #archive .collapse>
     ^{blogArchive}
 <article #blogpost>
     <h1>#{title}

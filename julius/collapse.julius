@@ -1,0 +1,6 @@
+$(function(){
+    $("nav.collapse li").addClass("closed");
+    $("nav.collapse li ul").parent().prepend("<span class='openclose'/>");
+    $("nav.collapse li.current").parents("li").andSelf().removeClass("closed");
+    $("span.openclose").click(function(){$(this).parent().toggleClass("closed");});
+});

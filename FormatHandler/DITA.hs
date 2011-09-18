@@ -154,8 +154,8 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
             doc <- cacheLoad uri
 
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
-                Nothing -> (docTitle doc, wrapper False Nothing (showNavs root (docNavs doc)) [])
-                Just nav -> (navTitle nav, wrapper True (Just $ navTitle nav) (showNavs root (docNavs doc)) (showNav makeRi nav))
+                Nothing -> (docTitle doc, wrapper False Nothing (showNavs Nothing root (docNavs doc)) [])
+                Just nav -> (navTitle nav, wrapper True (Just nav) (showNavs (Just nav) root (docNavs doc)) (showNav makeRi nav))
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
             Right (title, nodes) -> do
@@ -242,25 +242,25 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
 
     deepTopics tt = ttTopic tt : concatMap deepTopics (ttChildren tt)
 
-    wrapper hasBody mtitle toc content = [xml|
-<nav :hasBody:id=maptoc>
+    wrapper hasBody mnav toc content = [xml|
+<nav :hasBody:id=maptoc class=collapse>
     ^{toc}
 <article id=mapcontent>
-    $maybe title <- mtitle
-        <h1>#{title}
+    $maybe nav <- mnav
+        <h1 id=#{unNavId $ navId nav}>#{navTitle nav}
     ^{content}
 |]
-    showNavs _ [] = []
-    showNavs root navs = [xml|
+    showNavs _ _ [] = []
+    showNavs currentNav root navs = [xml|
 <ul>
     $forall nav <- navs
-        <li>
+        <li :(==) (Just $ navId nav) (fmap navId currentNav):class=current>
             $maybe _ <- navTopicTree nav
                 <a href="#{root}?nav=#{unNavId $ navId nav}">
                     \#{navTitle nav}
             $nothing
                 \#{navTitle nav}
-            ^{showNavs root $ navChildren nav}
+            ^{showNavs currentNav root $ navChildren nav}
 |]
     showNav ri Nav { navTopicTree = Just tt } = renderTopicTree ri tt
     showNav _ _ = []

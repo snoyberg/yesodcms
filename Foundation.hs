@@ -105,6 +105,7 @@ defaultLayoutExtraParents parents' widget = do
         $(widgetFile "comments")
         atomLink BlogFeedR "Blog posts"
         atomLink ContentFeedR "Site activity"
+        $(widgetFile "collapse")
     pc' <- widgetToPageContent $(widgetFile "default-layout")
     hamletToRepHtml $ pageBody pc'
 

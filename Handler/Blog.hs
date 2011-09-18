@@ -40,6 +40,7 @@ getBlogPostR y m s = do
     u <- runDB $ get404 $ blogAuthor b
     let title = blogTitle b
     archive <- getArchive
+    let current = Just $ BlogPostR y m s
     let blogArchive = $(widgetFile "blog-archive")
     let widget = blogWidget b
     defaultLayout $(widgetFile "blog")
@@ -71,4 +72,5 @@ getArchive = fmap (map (second hoist) . hoist . map (toTuples . snd)) $ runDB $ 
 getBlogArchiveR :: Handler RepHtml
 getBlogArchiveR = do
     archive <- getArchive
+    let current = Nothing
     defaultLayout $(widgetFile "blog-archive")

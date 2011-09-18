@@ -8,5 +8,5 @@
                         #{prettyMonth $ fst month}
                         <ul>
                             $forall entry <- snd month
-                                <li>
+                                <li :(==) (Just (eLink entry)) current:.current>
                                     <a title=#{eDate entry} href=@{eLink entry}>#{eTitle entry}

@@ -1,0 +1,18 @@
+nav.collapse li.closed ul {
+    display: none;
+}
+nav.collapse li {
+    position: relative;
+}
+nav.collapse span.openclose {
+    position: absolute;
+    left: -16px;
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: url(@{StaticR custom_list_remove_png});
+    cursor: pointer;
+}
+nav.collapse li.closed span.openclose {
+    background: url(@{StaticR custom_list_add_png});
+}

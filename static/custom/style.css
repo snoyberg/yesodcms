@@ -122,3 +122,10 @@ caption {
     font-weight: bold;
     font-size: 1.2em;
 }
+
+/* collapsible toc */
+nav li.current a, nav li.current a:visited, nav li.current a:hover {
+    cursor: default;
+    color: #900;
+    text-decoration: none;
+}
