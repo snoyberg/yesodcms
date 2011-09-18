@@ -240,7 +240,7 @@ postUserFileR user ts = do
             Just{} -> do
                 let toPath e = T.intercalate "/" $ "home" : toSinglePiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
                 (updated, nu) <- execWriterT $ mapM_ (upload fs rfs fhs toPath) $ zEntries archive
-                runDB $ mapM_ setCanons $ Set.toList updated
+                runDB $ mapM_ setCanons $ Set.toList updated -- FIXME doesn't seem to be working
                 setMessage $
                     if Set.null nu
                         then "ZIP file uploaded successfully"
