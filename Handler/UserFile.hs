@@ -257,7 +257,7 @@ postUserFileR user ts = do
         let lbs = fromEntry entry
         let onSucc = tell (Set.singleton t, Set.empty)
         let onErr = tell (Set.empty, Set.singleton $ T.pack $ eRelativePath entry)
-        case Map.lookup ext rawFiles of
+        case Map.lookup (T.toLower ext) rawFiles of
             Nothing ->
                 case findHandler ext fhs of
                     Nothing -> onErr
