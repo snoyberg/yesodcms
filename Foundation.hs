@@ -145,6 +145,8 @@ instance Yesod Cms where
         unless exists $ liftIO $ L.writeFile fn' content'
         return $ Just $ Right (StaticR $ StaticRoute ["tmp", T.pack fn] [], [])
 
+    maximumContentLength _ (Just UserFileR{}) = 7 * 1024 * 1024 -- 7 megabytes
+    maximumContentLength _ _ = 2 * 1024 * 1024 -- 2 megabytes
 
 -- How to run database actions.
 instance YesodPersist Cms where
