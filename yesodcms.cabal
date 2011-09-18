@@ -122,6 +122,7 @@ executable         yesodcms
                  , tagsoup
                  , pandoc
                  , http-enumerator
+                 , xml-types
 
     if !os(windows)
          build-depends: unix

@@ -10,8 +10,6 @@ import Text.Search.Sphinx
 import qualified Text.Search.Sphinx.Types as S
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Text.XML as X
-import Text.Hamlet.XML (xml)
 import FileStore
 import FormatHandler
 import Data.Maybe (catMaybes)
@@ -21,6 +19,13 @@ import qualified Text.Search.Sphinx.ExcerptConfiguration as E
 import Data.Text.Lazy.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (ignore)
 import Text.Blaze (preEscapedLazyText)
+import Data.Enumerator (($$), run_, Enumerator, ($=), concatEnums, enumList, (=$), liftTrans)
+import qualified Data.Enumerator.List as EL
+import qualified Data.XML.Types as X
+import Network.Wai (Response (ResponseEnumerator))
+import Network.HTTP.Types (status200)
+import Text.XML.Stream.Render (renderBuilder, def)
+import Database.Persist.GenericSql (SqlPersist, runSqlPool)
 
 data MInfo = MInfo
     { miFile :: T.Text
@@ -70,28 +75,62 @@ getSearchR = do
 
 getSearchXmlpipeR :: Handler RepXml
 getSearchXmlpipeR = do
-    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
-    files <- runDB $ selectList [] [] -- FIXME it would be nice to use an enum, but we have to be able to write to the DB inside the iter
-    docs <- fmap catMaybes $ runDB $ forM files $ \(fid, f) -> do
+    Cms { formatHandlers = fhs, fileStore = fs, connPool = pool } <- getYesod
+    let events = concatEnums
+            [ enumList 8 startEvents
+            , docEnum fhs fs
+            , enumList 8 endEvents
+            ]
+    sendWaiResponse $ ResponseEnumerator $ \sriter -> do
+        let iter = sriter status200 [("Content-Type", "text/xml")]
+        flip runSqlPool pool $ run_ $ events $$ renderBuilder def =$ liftTrans iter
+  where
+    toName x = X.Name x (Just "http://sphinxsearch.com/") (Just "sphinx")
+    docset = toName "docset"
+    schema = toName "schema"
+    field = toName "field"
+    document = toName "document"
+    content = "content" -- no prefix
+
+    startEvents =
+        [ X.EventBeginDocument
+        , X.EventBeginElement docset []
+        , X.EventBeginElement schema []
+        , X.EventBeginElement field [("name", [X.ContentText "content"])]
+        , X.EventEndElement field
+        , X.EventEndElement schema
+        ]
+
+    endEvents =
+        [ X.EventEndElement docset
+        ]
+
+    pairToEvents :: (FileNameId, T.Text) -> [X.Event]
+    pairToEvents (fid, t) =
+        [ X.EventBeginElement document [("id", [X.ContentText $ toSinglePiece fid])]
+        , X.EventBeginElement content []
+        , X.EventContent $ X.ContentText t
+        , X.EventEndElement content
+        , X.EventEndElement document
+        ]
+
+    docEnum :: [FormatHandler Cms] -> FileStore -> Enumerator X.Event (SqlPersist IO) a
+    docEnum fhs fs = (selectEnum [] [] $= EL.concatMapM (helper fhs fs)) $= EL.concatMap pairToEvents
+
+    helper :: [FormatHandler Cms] -> FileStore -> (FileNameId, FileName) -> SqlPersist IO [(FileNameId, T.Text)]
+    helper fhs fs (fid, f) = do
         let t = T.drop 1 $ T.dropWhile (/= ':') $ fileNameUri f
         case findHandler (snd $ T.breakOnEnd "." t) fhs of
-            Nothing -> return Nothing
+            Nothing -> return []
             Just fh -> do
                 muri <- liftIO $ fsGetFile fs t
                 case muri of
-                    Nothing -> return Nothing
+                    Nothing -> return []
                     Just uri -> do
                         mtext <- liftIO $ fhToText fh (fsSM fs) uri
                         case mtext of
-                            Nothing -> return Nothing
+                            Nothing -> return []
                             Just text -> do
-                                title <- lift $ fileTitle t
+                                title <- fileTitle' fs fhs t
                                 update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
-                                return $ Just (fid, T.concat [title, " ", text])
-    return $ RepXml $ toContent $ X.renderLBS X.def $ flip (X.Document (X.Prologue [] Nothing [])) [] $ X.Element "sphinx:docset" [] [xml|
-<sphinx:schema>
-    <sphinx:field name=content>
-$forall doc <- docs
-    <sphinx:document id=#{toSinglePiece $ fst doc}>
-        <content>#{snd doc}
-|]
+                                return [(fid, T.concat [title, " ", text])]

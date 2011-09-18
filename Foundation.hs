@@ -17,6 +17,7 @@ module Foundation
     , StaticRoute (..)
     , AuthRoute (..)
     , fileTitle
+    , fileTitle'
     ) where
 
 import Yesod
@@ -233,6 +234,10 @@ instance YesodBreadcrumbs Cms where
 fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
 fileTitle t = do
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    fileTitle' fs fhs t
+
+fileTitle' :: MonadIO m => FileStore -> [FormatHandler master] -> FileStorePath -> m T.Text
+fileTitle' fs fhs t = do
     let ext = snd $ T.breakOnEnd "." t
     let mfh = findHandler ext fhs
     muri <- liftIO $ fsGetFile fs t
