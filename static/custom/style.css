@@ -5,12 +5,30 @@ body {
 h1, h2, h3, h4, h5, h6 {
     font-family: Cambria, Georgia, "Droid Serif", "DejaVu Serif", serif;
 }
+#logo a {
+    background: url(logo.gif) no-repeat;
+    display: block;
+    height: 80px;
+    width: 450px;
+    float: left;
+}
+#logo a span {
+    display: none;
+}
 #topbar {
     text-align: right;
-    background: url(logo.gif) no-repeat;
-    height: 60px;
-    padding-top: 20px;
     color: #999;
+}
+#login, #topbar ul {
+    float: right;
+    margin: 0 1em;
+    padding-left: 0;
+}
+#login p {
+    margin: 0;
+}
+#breadcrumbs {
+    clear: both;
 }
 #message {
     margin: 0.5em;
@@ -77,11 +95,8 @@ article#mapcontent, article#blogpost {
         display: block;
         padding-left: 0;
     }
-    #topbar div, .home #topbar div {
+    #topbar #login, .home #topbar #login{
         display: none;
-    }
-    #topbar {
-        padding-top: 60px;
     }
 }
 
