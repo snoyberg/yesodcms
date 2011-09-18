@@ -13,6 +13,6 @@ Staging:
   <<: *defaults
 
 Production:
-  approot: "http://beta.yesodweb.com"
+  approot: "http://socialkb.suite-sol.com"
   port: 5007
   connectionPoolSize: 10

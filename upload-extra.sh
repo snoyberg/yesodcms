@@ -1,3 +1,3 @@
 #!/bin/bash -ex
 rm -rf static/tmp
-scp -r data dita static ubuntu@beta.yesodweb.com:/home/ubuntu/yesodcms
+scp -r config dita static ubuntu@socialkb.suite-sol.com:/home/ubuntu
