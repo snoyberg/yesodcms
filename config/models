@@ -35,3 +35,8 @@ Blog
     author UserId
     title Text
     UniqueBlog year month slug
+Alias
+    orig Text
+    slug Text
+    title Text
+    UniqueAlias slug

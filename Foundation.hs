@@ -46,6 +46,7 @@ import Data.Map (Map)
 import Yesod.AtomFeed
 import Data.Maybe (fromMaybe)
 import Control.Monad.IO.Class (MonadIO)
+import Data.IORef (IORef)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -59,6 +60,7 @@ data Cms = Cms
     , formatHandlers :: [FormatHandler Cms]
     , fileStore :: FileStore
     , rawFiles :: Map T.Text ContentType
+    , aliases :: IORef [Alias]
     }
 
 mkMessage "Cms" "messages" "en"
@@ -189,6 +191,27 @@ instance YesodAloha Cms where
 instance YesodJquery Cms where
     urlJqueryJs _ = Left $ StaticR jquery_js
 
+fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
+fileTitle t = do
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    fileTitle' fs fhs t
+
+fileTitle' :: MonadIO m => FileStore -> [FormatHandler master] -> FileStorePath -> m T.Text
+fileTitle' fs fhs t = do
+    let ext = snd $ T.breakOnEnd "." t
+    let mfh = findHandler ext fhs
+    muri <- liftIO $ fsGetFile fs t
+    mtitle <-
+        case (mfh, muri) of
+            (Just fh, Just uri) -> liftIO $ fhTitle fh (fsSM fs) uri
+            _ -> return Nothing
+    return $ fromMaybe backup mtitle
+  where
+    backup = safeInit $ fst $ T.breakOnEnd "." $ snd $ T.breakOnEnd "/" t
+    safeInit s
+        | T.null s = s
+        | otherwise = T.init s
+
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
 
@@ -206,7 +229,12 @@ instance YesodBreadcrumbs Cms where
 
     breadcrumb UsersR = return ("User list", Just RootR)
     breadcrumb (UserFileR user []) = return (user, Just UsersR)
-    breadcrumb (UserFileR user x) = return (last x, Just $ UserFileR user $ init x)
+    breadcrumb (UserFileR user x) = do
+        -- Check for aliases
+        ma <- runDB $ selectFirst [AliasOrig ==. T.intercalate "/" ("home" : user : x)] []
+        case ma of
+            Nothing -> return (last x, Just $ UserFileR user $ init x)
+            Just (_, a) -> return (aliasTitle a, Just RootR)
 
     breadcrumb BlogArchiveR = return ("Blog", Just RootR)
     breadcrumb (BlogPostR year month slug) = do
@@ -230,24 +258,4 @@ instance YesodBreadcrumbs Cms where
     breadcrumb CreateBlogR{} = return ("", Nothing)
     breadcrumb SearchXmlpipeR = return ("", Nothing)
     breadcrumb BlogR = return ("", Nothing)
-
-fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
-fileTitle t = do
-    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
-    fileTitle' fs fhs t
-
-fileTitle' :: MonadIO m => FileStore -> [FormatHandler master] -> FileStorePath -> m T.Text
-fileTitle' fs fhs t = do
-    let ext = snd $ T.breakOnEnd "." t
-    let mfh = findHandler ext fhs
-    muri <- liftIO $ fsGetFile fs t
-    mtitle <-
-        case (mfh, muri) of
-            (Just fh, Just uri) -> liftIO $ fhTitle fh (fsSM fs) uri
-            _ -> return Nothing
-    return $ fromMaybe backup mtitle
-  where
-    backup = safeInit $ fst $ T.breakOnEnd "." $ snd $ T.breakOnEnd "/" t
-    safeInit s
-        | T.null s = s
-        | otherwise = T.init s
+    breadcrumb CreateAliasR{} = return ("", Nothing)

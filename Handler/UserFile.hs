@@ -6,6 +6,7 @@ module Handler.UserFile
     , postUserFileR
     , getRedirectorR
     , postCreateBlogR
+    , postCreateAliasR
     ) where
 
 import Foundation
@@ -32,6 +33,7 @@ import qualified Data.ByteString.Lazy as L
 import Yesod.Goodies.Gravatar
 import Data.Time
 import Network.HTTP.Enumerator
+import Data.IORef (writeIORef)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -88,7 +90,13 @@ getUserFileR user ts = do
                                             | userAdmin u -> fmap Just $ do
                                                 let url = CreateBlogR t
                                                 ((_, widget), _) <- lift $ runFormPost blogForm
-                                                return (url, widget)
+                                                Just cr <- lift getCurrentRoute
+                                                tm <- lift getRouteToMaster
+                                                r <- lift getUrlRender
+                                                let url2 = CreateAliasR
+                                                title <- lift $ fileTitle t
+                                                ((_, widget2), _) <- lift $ runFormPost $ aliasForm (Just $ r $ tm cr) (Just title)
+                                                return ((url, widget), (url2, widget2))
                                         _ -> return Nothing
                                 $(widgetFile "user-file-edit")
                         Just (_, canon) -> redirectText RedirectTemporary $ canonPathRedirect canon
@@ -106,6 +114,27 @@ blogForm =
             x <- runDB $ getBy $ UniqueBlog year month slug
             case x of
                 Nothing -> return $ Right slug'
+                Just{} -> return $ Left "Slug already in use, please try again"
+    invalidChar c
+        | 'a' <= c && c <= 'z' = False
+        | '0' <= c && c <= '9' = False
+        | c == '-' = False
+        | otherwise = True
+
+aliasForm :: Maybe T.Text -> Maybe T.Text -> Html -> Form Cms Cms (FormResult (T.Text, T.Text, T.Text), Widget)
+aliasForm murl mtitle =
+    renderTable $ (,,)
+        <$> areq (checkM validSlug textField) "Alias slug" Nothing
+        <*> areq urlField "Destination" murl
+        <*> areq textField "Title" mtitle
+  where
+    validSlug :: T.Text -> GGHandler Cms Cms IO (Either T.Text T.Text)
+    validSlug slug
+        | T.any invalidChar slug = return $ Left "Slug must be lowercase letters, numbers and hyphens"
+        | otherwise = do
+            x <- runDB $ getBy $ UniqueAlias slug
+            case x of
+                Nothing -> return $ Right slug
                 Just{} -> return $ Left "Slug already in use, please try again"
     invalidChar c
         | 'a' <= c && c <= 'z' = False
@@ -140,6 +169,32 @@ postCreateBlogR t = do
         <tr>
             <td colspan=3>
                 <input type=submit value="Create blog post">
+|]
+
+postCreateAliasR :: Handler RepHtml
+postCreateAliasR = do
+    (_uid, u) <- requireAuth
+    unless (userAdmin u) $ permissionDenied "Only admins can make aliases"
+    ((res, widget), _) <- runFormPost $ aliasForm Nothing Nothing
+    case res of
+        FormSuccess (slug, url, title) -> do
+            let a = Alias
+                    { aliasSlug = slug
+                    , aliasOrig = T.drop 1 $ snd $ T.break (== '/') $ T.drop 2 $ snd $ T.breakOn "//" url
+                    , aliasTitle = title
+                    }
+            as <- runDB $ insert a >> fmap (map snd) (selectList [] [])
+            Cms { aliases } <- getYesod
+            liftIO $ writeIORef aliases as
+            setMessage "Alias created"
+            redirectText RedirectTemporary $ T.cons '/' slug
+        _ -> defaultLayout [whamlet|
+<form method=post>
+    <table>
+        ^{widget}
+        <tr>
+            <td colspan=3>
+                <input type=submit value="Create alias">
 |]
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()

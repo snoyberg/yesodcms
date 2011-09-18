@@ -2,9 +2,15 @@ $if canWrite
     <p>
         <a href=@{EditPageR ts'}>Edit
     $maybe blogPost <- mblogPost
-        <form method=post action=@{fst blogPost}>
+        <form method=post action=@{fst $ fst blogPost}>
             <table>
-                ^{snd blogPost}
+                ^{snd $ fst blogPost}
                 <tr>
                     <td colspan=3>
                         <input type=submit value="Post to blog">
+        <form method=post action=@{fst $ snd blogPost}>
+            <table>
+                ^{snd $ snd blogPost}
+                <tr>
+                    <td colspan=3>
+                        <input type=submit value="Create alias">

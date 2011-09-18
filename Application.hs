@@ -91,6 +91,7 @@ withCms conf logger f = do
                 , ("jpeg", "image/jpeg")
                 ]
         idocCache <- newIORef Map.empty
+        ialiases <- runConnectionPool (selectList [] []) p >>= newIORef . map snd
         let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
             h = Cms conf logger s p
                     [ textFormatHandler
@@ -98,11 +99,11 @@ withCms conf logger f = do
                     , htmlFormatHandler
                     , ditaFormatHandler renderHref cache classmap (loadFileId p)
                     , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toNavRoute
-                    ] (simpleFileStore "data") raw
+                    ] (simpleFileStore "data") raw ialiases
 #ifdef WINDOWS
-        toWaiApp h >>= f . book >> return ()
+        toWaiApp h >>= f . book ialiases >> return ()
 #else
-        tid <- forkIO $ toWaiApp h >>= f . book >> return ()
+        tid <- forkIO $ toWaiApp h >>= f . book ialiases >> return ()
         flag <- newEmptyMVar
         _ <- Signal.installHandler Signal.sigINT (Signal.CatchOnce $ do
             putStrLn "Caught an interrupt"
@@ -111,22 +112,28 @@ withCms conf logger f = do
         takeMVar flag
 #endif
 
-book :: W.Middleware
-book app req =
-    case W.pathInfo req of
-        ["book"] -> app req
-            { W.pathInfo = ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"]
-            }
-        ["book", nav] -> app req
-            { W.pathInfo = ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"]
-            , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
-            }
-        ["home", "snoyberg", "book", "yesod-web-framework-book.ditamap"] ->
-            case join $ lookup "nav" $ W.queryString req of
-                Nothing -> redir ["book"] $ W.queryString req
-                Just nav -> redir ["book", decodeUtf8With lenientDecode nav] noNav
-        _ -> app req
+book :: IORef [Alias] -> W.Middleware
+book ialiases app req = do
+    liftIO (readIORef ialiases) >>= go
   where
+    go [] = app req
+    go (a:as) =
+        case W.pathInfo req of
+            [x] | x == aliasSlug a -> app req
+                { W.pathInfo = pieces
+                }
+            [x, nav] | x == aliasSlug a -> app req
+                { W.pathInfo = pieces
+                , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
+                }
+            x | x == pieces ->
+                case join $ lookup "nav" $ W.queryString req of
+                    Nothing -> redir [aliasSlug a] $ W.queryString req
+                    Just nav -> redir [aliasSlug a, decodeUtf8With lenientDecode nav] noNav
+            _ -> go as
+      where
+        pieces = H.decodePathSegments $ encodeUtf8 $ aliasOrig a
+
     redir ps qs =
         return $ W.responseLBS H.status301 [("Location", toByteString path)] ""
       where
