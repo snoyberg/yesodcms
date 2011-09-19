@@ -249,3 +249,13 @@ pre.codeblock {
     font-size: 0.9em;
     line-height: 1.4em;
 }
+nav.toc > ul > li {
+    display: inline-block;
+    vertical-align: top;
+    padding-right: 20px;
+    font-weight: bold;
+}
+nav.toc > ul > li > ul {
+    padding-left: 0;
+    font-weight: normal;
+}

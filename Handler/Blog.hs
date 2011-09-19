@@ -73,4 +73,5 @@ getBlogArchiveR :: Handler RepHtml
 getBlogArchiveR = do
     archive <- getArchive
     let current = Nothing
-    defaultLayout $(widgetFile "blog-archive")
+    let ba = $(widgetFile "blog-archive")
+    defaultLayout [whamlet|<nav .toc>^{ba}|]

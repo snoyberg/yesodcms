@@ -114,7 +114,9 @@ Last blog post: #
 |]
             else return Nothing
     pc <- widgetToPageContent $ do
-        setTitle $ toHtml title'
+        if isHome
+            then setTitle "Yesod Web Framework"
+            else setTitle $ toHtml title'
         widget
         addScriptEither $ urlJqueryJs y
         $(widgetFile "comments")

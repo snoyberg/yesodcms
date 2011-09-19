@@ -266,7 +266,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
     deepTopics tt = ttTopic tt : concatMap deepTopics (ttChildren tt)
 
     wrapper hasBody mnav toc content = [xml|
-<nav :hasBody:id=maptoc class=collapse>
+<nav :hasBody:id=maptoc :hasBody:class=collapse :not hasBody:class=toc>
     ^{toc}
 <article id=mapcontent>
     $maybe nav <- mnav
