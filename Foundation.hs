@@ -99,7 +99,6 @@ defaultLayoutExtraParents parents' widget = do
     let isHome = Just RootR == fmap tm cr
     pc <- widgetToPageContent $ do
         setTitle $ toHtml title'
-        $(widgetFile "top-bar")
         widget
         addScriptEither $ urlJqueryJs y
         $(widgetFile "comments")
@@ -107,7 +106,7 @@ defaultLayoutExtraParents parents' widget = do
         atomLink ContentFeedR "Site activity"
         $(widgetFile "collapse")
     pc' <- widgetToPageContent $(widgetFile "default-layout")
-    hamletToRepHtml $ pageBody pc'
+    hamletToRepHtml $(hamletFile "default-layout-wrapper")
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
