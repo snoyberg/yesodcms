@@ -236,7 +236,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb ProfileR = return ("Profile", Just RootR)
 
     breadcrumb UsersR = return ("User list", Just RootR)
-    breadcrumb (UserFileR user []) = return (user, Just UsersR)
+    breadcrumb (UserFileR user []) = return (user, Just RootR)
     breadcrumb (UserFileR user x) = do
         -- Check for aliases
         ma <- runDB $ selectFirst [AliasOrig ==. T.intercalate "/" ("home" : user : x)] []
