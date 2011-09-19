@@ -182,7 +182,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         case mnavid of
             Nothing -> return []
             Just navid -> do
-                edoc <- liftIO $ runDITA cache sm (Just loadFileId) $ loadDoc uri
+                edoc <- liftIO $ runDITA cache sm (Just loadFileId) $ cacheLoad uri
                 case edoc of
                     Left{} -> return []
                     Right doc -> return $ showNavParents uri (NavId navid) doc
