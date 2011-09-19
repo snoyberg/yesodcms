@@ -5,12 +5,6 @@
                     <span>Homepage
             <ul>
                 <li>
-                    <a href=@{RootR}book>Book
-                <li>
-                    <a href=@{BlogR}>Blog
-                <li>
-                    <a href=@{UsersR}>Browse
-                <li>
                     <a href=@{WikiR mempty}>Wiki
                 <li>
                     <form style=display:inline action=@{SearchR}>
