@@ -154,6 +154,8 @@ instance Yesod Cms where
     maximumContentLength _ (Just UserFileR{}) = 7 * 1024 * 1024 -- 7 megabytes
     maximumContentLength _ _ = 2 * 1024 * 1024 -- 2 megabytes
 
+    gzipCompressFiles _ = True
+
 -- How to run database actions.
 instance YesodPersist Cms where
     type YesodPersistBackend Cms = SqlPersist
