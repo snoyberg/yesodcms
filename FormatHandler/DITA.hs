@@ -11,7 +11,8 @@ import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
 import DITA.Parse (loadTopicTrees, runDITA, loadDoc)
-import DITA.Output.HTML (renderTopicTree, hsClassMap, hsGoElem, HtmlSettings)
+import qualified DITA.Util as DU
+import DITA.Output.HTML (renderTopicTree, hsClassMap, hsGoElem, HtmlSettings, renderElement)
 import DITA.Util.Render
 import DITA.Util.ClassMap (ClassMap)
 import Text.XML
@@ -219,7 +220,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         , riChildren = []
         , riRelTable = []
         , riGetLinkText = const "<Link text not enabled yet>"
-        , riRenderNav = const Nothing
+        , riRenderNav = const Nothing -- FIXME
         , riRenderHref = renderHref'
         , riPrevious = Nothing
         , riNext = Nothing
@@ -257,7 +258,17 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
                 \#{navTitle nav}
             ^{showNavs currentNav root $ navChildren nav}
 |]
-    showNav ri Nav { navTopicTree = Just tt } = renderTopicTree ri tt
+    showNav ri Nav { navTopicTree = Just tt, navChildren = navs } = [xml|
+^{renderTopicTree ri tt}
+$if not $ null navs
+    <ul class=children>
+        $forall nav <- navs
+            <li>
+                <a href="?nav=#{unNavId $ navId nav}">
+                    \#{navTitle nav}
+                $maybe sd <- navShortDesc nav
+                    <p class=shortdesc>^{renderElement (ri $ ttTopic tt) sd}
+|]
     showNav _ _ = []
 
     showNavsDeep ri nav = [xml|
@@ -335,3 +346,10 @@ xmlFilter lbs =
 
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
 goElem _ _ _ = Nothing
+
+navShortDesc :: Nav -> Maybe D.Element
+navShortDesc Nav { navTopicTree = Just (D.TopicTree { D.ttTopic = D.Topic { topicContent = content } }) } =
+    case filter (DU.hasClass "topic/shortdesc") content of
+        e:_ -> Just e
+        [] -> Nothing
+navShortDesc _ = Nothing
