@@ -22,8 +22,7 @@ import Network.URI.Enumerator
 import Control.Monad (unless, forM_, filterM)
 import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
-import Database.Persist.Join hiding (runJoin)
-import Database.Persist.Join.Sql (runJoin)
+import Handler.Profile (getLabels)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
@@ -58,7 +57,7 @@ getEditPageR ts = do
             setMessage "File contents updated"
         _ -> return ()
     let toView = isJust mcontents || isSucc res
-    labels <- runDB $ runJoin $ selectOneMany (LabelGroup <-.) labelGroup
+    labels <- runDB getLabels
     fid <- fmap (either fst id) $ runDB $ insertBy $ FileName t Nothing Nothing
     myLabels <- fmap (map $ fileLabelLabel . snd) $ runDB $ selectList [FileLabelFile ==. fid] []
     let isChecked = flip elem myLabels

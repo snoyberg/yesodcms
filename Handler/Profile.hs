@@ -10,6 +10,8 @@ module Handler.Profile
 
     , postLabelsR
     , postDeleteLabelR
+
+    , getLabels
     ) where
 
 import Foundation
@@ -55,7 +57,7 @@ getProfileR = do
             else return Nothing
     mlabels <-
         if userAdmin u
-            then fmap Just $ runDB $ runJoin $ selectOneMany (LabelGroup <-.) labelGroup
+            then fmap Just $ runDB getLabels
             else return Nothing
     liftIO $ print mlabels
     ((_, labelForm), _) <- runFormPost newLabelForm
@@ -135,3 +137,9 @@ postDeleteLabelR lid = do
     runDB $ delete lid
     setMessage "Label deleted"
     redirect RedirectTemporary ProfileR
+
+getLabels :: YesodDB Cms Cms [((GroupId, Group), [(LabelId, Label)])]
+getLabels = runJoin (selectOneMany (LabelGroup <-.) labelGroup)
+    { somOrderOne = [Asc GroupPriority]
+    , somOrderMany = [Asc LabelName]
+    }
