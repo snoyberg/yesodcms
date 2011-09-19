@@ -40,3 +40,15 @@ Alias
     slug Text
     title Text
     UniqueAlias slug
+
+Group
+    name Text
+    priority Int
+    UniqueGroup name
+Label
+    group GroupId
+    name Text
+    UniqueLabel group name
+FileLabel
+    file FileNameId
+    label LabelId

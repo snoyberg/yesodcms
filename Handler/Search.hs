@@ -26,6 +26,8 @@ import Network.Wai (Response (ResponseEnumerator))
 import Network.HTTP.Types (status200)
 import Text.XML.Stream.Render (renderBuilder, def)
 import Database.Persist.GenericSql (SqlPersist, runSqlPool)
+import Database.Persist.Join hiding (runJoin)
+import Database.Persist.Join.Sql (runJoin)
 
 data MInfo = MInfo
     { miFile :: T.Text
@@ -37,6 +39,7 @@ getSearchR :: Handler RepHtml
 getSearchR = do
     mquery <- runInputGet $ iopt textField "q"
     mres <- maybe (return Nothing) (fmap Just . liftIO . query config "yesodcms" . T.unpack) mquery
+    labels <- runDB $ runJoin $ selectOneMany (LabelGroup <-.) labelGroup
     let results =
             case mres of
                 Nothing -> return ()

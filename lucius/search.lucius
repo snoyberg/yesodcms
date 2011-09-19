@@ -1,0 +1,19 @@
+@media (min-width: 600px) {
+    .leftbar, .search-results {
+        display: table-cell;
+    }
+}
+input[type=submit] {
+    display: block;
+}
+fieldset div {
+    border-top: 1px groove #ccc;
+    margin-top: 3px;
+    padding-top: 3px;
+}
+fieldset div:first-of-type {
+    border-top: 0;
+}
+fieldset {
+    margin-bottom: 2em;
+}

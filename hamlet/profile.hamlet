@@ -17,3 +17,39 @@
     . Your current avatar is:
 <p>
     <img alt=Avatar src=#{gravatarImg (userEmail u) opts}
+$maybe groups <- mgroups
+    <h2>Label groups
+    <table>
+        $forall group <- groups
+            <tr>
+                <td>#{groupName $ snd group}
+                <td>
+                    <form method=post action=@{DeleteGroupR $ fst group}>
+                        <input type=submit value=Delete group>
+                <td>
+                    <form method=post action=@{UpGroupR $ fst group}>
+                        <input type=submit value=Up>
+                <td>
+                    <form method=post action=@{DownGroupR $ fst group}>
+                        <input type=submit value=Down>
+    <p>
+        <form method=post action=@{GroupsR}>
+            Create a new group named: #
+            <input type=text name=name>
+            \ #
+            <input type=submit value=Create>
+$maybe alllabels <- mlabels
+    <h2>Labels
+    $forall grouppair <- alllabels
+        $with group <- snd $ fst grouppair, labels <- snd grouppair
+            <table>
+                <caption>#{groupName group}
+                $forall label <- labels
+                    <tr>
+                        <td>#{labelName $ snd label}
+                        <td>
+                            <form method=post action=@{DeleteLabelR $ fst label}>
+                                <input type=submit value=Delete>
+    <p>
+        <form method=post action=@{LabelsR}>
+            ^{labelForm}

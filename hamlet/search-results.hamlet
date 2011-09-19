@@ -1,8 +1,9 @@
-<h2>Results
-$forall mi <- mis
-    <div .result>
-        <div .link>
-            <a href=@{RedirectorR $ miFile mi}>
-                #{miTitle mi}
-        <div .excerpt>
-            \#{preEscapedLazyText $ miExcerpt mi}
+<article .search-results>
+    <h2>Results
+    $forall mi <- mis
+        <div .result>
+            <div .link>
+                <a href=@{RedirectorR $ miFile mi}>
+                    #{miTitle mi}
+            <div .excerpt>
+                \#{preEscapedLazyText $ miExcerpt mi}

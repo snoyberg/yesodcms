@@ -36,3 +36,11 @@
 /search/xmlpipe SearchXmlpipeR GET
 
 /create-alias CreateAliasR POST
+
+/groups GroupsR POST
+/groups/#GroupId/delete DeleteGroupR POST
+/groups/#GroupId/up UpGroupR POST
+/groups/#GroupId/down DownGroupR POST
+
+/labels LabelsR POST
+/labels/#LabelId/delete DeleteLabelR POST

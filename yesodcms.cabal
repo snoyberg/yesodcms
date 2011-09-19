@@ -75,7 +75,7 @@ executable         yesodcms
                  , yesod-auth   >= 0.7.3
                  , yesod-static
                  , blaze-html
-                 , yesod-form
+                 , yesod-form   >= 0.3.3
                  , mime-mail
                  , clientsession
                  , wai-extra
