@@ -48,6 +48,7 @@ import Data.Text.Encoding (decodeUtf8)
 import Blaze.ByteString.Builder (toByteString, fromByteString)
 import Network.Wai (rawQueryString, rawPathInfo)
 import Network.HTTP.Types (parseQuery)
+import Data.Char (isUpper)
 
 import qualified Text.Highlighting.Illuminate as I
 import qualified Text.Highlighting.Illuminate.Haskell as Haskell
@@ -387,6 +388,9 @@ highlighters = Map.fromList
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
 goElem "pr-d/codeblock" _ e@(D.Element _ _ _ [D.NodeContent t])
     | Just lexer <- getAttrText "outputclass" e >>= flip Map.lookup highlighters = highlight lexer t
+goElem "pr-d/apiname" _ (D.Element _ _ _ [D.NodeContent t]) =
+    let (href, display) = renderApiname t
+     in Just [xml|<a href=#{href}>#{display}|]
 goElem _ _ _ = Nothing
 
 
@@ -419,3 +423,31 @@ highlight lexer t =
     starts' _ ("-- STOP":ls) = starts' False ls
     starts' True (l:ls) = l : starts' True ls
     starts' False (_:ls) = starts' False ls
+
+renderApiname :: T.Text -> (T.Text, T.Text)
+renderApiname a
+    | T.null modul = ("http://hackage.haskell.org/package/" `T.append` a, a)
+    | T.null ident = (modulHref, modul)
+    | otherwise = (identHref, ident)
+  where
+    (package, b) = T.break (== ':') a
+    (modul, c) = T.break (== ':') $ T.drop 1 b
+    ident = T.drop 1 c
+
+    modulHref = T.concat
+        [ "http://hackage.haskell.org/packages/archive/"
+        , package
+        , "/latest/doc/html/"
+        , T.map dotToDash modul
+        , ".html"
+        ]
+    dotToDash '.' = '-'
+    dotToDash c' = c'
+
+    identHref = T.concat
+        [ modulHref
+        , "#"
+        , if isUpper (T.head ident) then "t" else "v"
+        , ":"
+        , ident
+        ]
