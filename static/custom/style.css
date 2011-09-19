@@ -144,3 +144,7 @@ nav li.current > a, nav li.current > a:visited, nav li.current > a:hover {
     color: #900;
     text-decoration: none;
 }
+
+nav.collapse ul {
+    margin: 0;
+}
