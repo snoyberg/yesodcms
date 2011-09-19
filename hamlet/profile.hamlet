@@ -1,3 +1,7 @@
+<h2>Documents
+<p>
+    <a href=@{UserFileR (userHandle u) mempty}>Manage my files
+<h2>Profile
 <form method=post enctype=#{enctype}>
     <table>
         ^{widget}

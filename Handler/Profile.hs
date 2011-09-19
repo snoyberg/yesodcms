@@ -8,6 +8,7 @@ import Foundation
 import Control.Applicative ((<$>), (<*>), pure)
 import qualified Data.Text as T
 import Yesod.Goodies.Gravatar
+import Data.Monoid (mempty)
 
 form :: UserId -> User -> Html -> Form Cms Cms (FormResult User, Widget)
 form uid user = renderTable $ User
