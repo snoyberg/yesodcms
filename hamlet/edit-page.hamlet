@@ -6,8 +6,21 @@
                 <input type=submit value="Update Topic">
                 \ #
                 <input type=submit name=delete value="Delete File">
+$if not $ null labels
+    <h2>Labels
+    <form method=post action=@{FileLabelsR ts}>
+        $forall grouppair <- labels
+            <div .group>
+                <h3>#{groupName $ snd $ fst grouppair}
+                <ul>
+                    $forall label <- snd grouppair
+                        <li>
+                            <input id=label-#{toSinglePiece $ fst label} type=checkbox name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
+                            <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
+        <p>
+            <input type=submit value="Update Labels">
 $if toView
-    <h3>View on site
+    <h2>View on site
     <ul>
         $forall route <- routes ts
             <li>

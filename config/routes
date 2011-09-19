@@ -44,3 +44,4 @@
 
 /labels LabelsR POST
 /labels/#LabelId/delete DeleteLabelR POST
+/file-labels/*Texts FileLabelsR POST

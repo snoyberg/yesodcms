@@ -52,3 +52,4 @@ Label
 FileLabel
     file FileNameId
     label LabelId
+    UniqueFileLabel file label

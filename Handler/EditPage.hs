@@ -2,6 +2,7 @@
 module Handler.EditPage
     ( getEditPageR
     , postEditPageR
+    , postFileLabelsR
     , routes
     , setCanons
     ) where
@@ -13,14 +14,16 @@ import FileStore
 import Data.Enumerator (($$), run_, enumList)
 import Data.Enumerator.List (consume)
 import qualified Data.ByteString as S
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, mapMaybe)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Enumerator
-import Control.Monad (unless, forM_)
+import Control.Monad (unless, forM_, filterM)
 import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
+import Database.Persist.Join hiding (runJoin)
+import Database.Persist.Join.Sql (runJoin)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
@@ -55,6 +58,10 @@ getEditPageR ts = do
             setMessage "File contents updated"
         _ -> return ()
     let toView = isJust mcontents || isSucc res
+    labels <- runDB $ runJoin $ selectOneMany (LabelGroup <-.) labelGroup
+    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName t Nothing Nothing
+    myLabels <- fmap (map $ fileLabelLabel . snd) $ runDB $ selectList [FileLabelFile ==. fid] []
+    let isChecked = flip elem myLabels
     defaultLayout $(widgetFile "edit-page")
   where
     isSucc FormSuccess{} = True
@@ -112,3 +119,17 @@ setCanons t = do
                                     , canonPathRedirect = render route query
                                     }
                                 return ()
+
+postFileLabelsR :: [T.Text] -> Handler ()
+postFileLabelsR ts = do
+    checkPerms ts
+    let t = T.intercalate "/" ts
+    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName t Nothing Nothing
+    (posts, _) <- runRequestBody
+    let isLabelId = fmap (maybe False (const True)) . get
+    lids <- runDB $ filterM isLabelId $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") posts
+    runDB $ do
+        deleteWhere [FileLabelFile ==. fid]
+        mapM_ (insert . FileLabel fid) lids
+    setMessage "Labels updated"
+    redirect RedirectTemporary $ EditPageR ts
