@@ -82,6 +82,7 @@ topic/data { display: deleted; }
 topic/metadata { display: deleted; }
 topic/category { display: deleted; }
 topic/keywords { display: deleted; }
+topic/required-cleanup { display: deleted; }
 
 /* FIXME We need better support for this */
 topic/related-links { display: deleted; }
