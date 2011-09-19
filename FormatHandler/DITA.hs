@@ -38,7 +38,6 @@ import qualified Data.ByteString.Lazy as L
 import qualified DITA.Types as D
 import Data.IORef
 import Network.URI.Enumerator (URI)
-import Data.Time
 import qualified Network.HTTP.Types as H
 import Blaze.ByteString.Builder.Char.Utf8 (fromChar, fromText)
 import Data.Monoid (mconcat)
@@ -118,7 +117,7 @@ ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      -> C.DTDCache IO
                      -> ClassMap
                      -> (URI -> IO D.FileId)
-                     -> IORef (Map.Map URI (UTCTime, Doc))
+                     -> IORef (Map.Map URI Doc)
                      -> (URI -> Route master)
                      -> (URI -> NavId -> D.FileId -> D.TopicId -> (Route master, [(T.Text, T.Text)]))
                      -> FormatHandler master
@@ -163,7 +162,11 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter
     , fhRefersTo = \sm uri -> do
-        edoc <- runDITA cache sm (Just loadFileId) $ loadDoc uri
+        -- this always gets called when there is new content, so start off by
+        -- clearing the cache
+        atomicModifyIORef idocCache (\m -> (Map.delete uri m, ()))
+
+        edoc <- runDITA cache sm (Just loadFileId) $ cacheLoad uri
         case edoc of
             Left{} -> return []
             Right doc -> do
@@ -223,18 +226,10 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         }
     cacheLoad uri = do
         docCache <- liftIO $ readIORef idocCache
-        mdoc <-
-            case Map.lookup uri docCache of
-                Nothing -> return Nothing
-                Just (toUpdate, doc) -> do
-                    now <- liftIO getCurrentTime
-                    return $ if now > toUpdate then Nothing else Just doc
-        case mdoc of
+        case Map.lookup uri docCache of
             Nothing -> do
                 doc <- loadDoc uri
-                now <- liftIO getCurrentTime
-                let toUpdate = addUTCTime (60 * 5) now
-                liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri (toUpdate, doc) m, ()))
+                liftIO $ atomicModifyIORef idocCache (\m -> (Map.insert uri doc m, ()))
                 return doc
             Just doc -> return doc
 
