@@ -24,8 +24,11 @@ getPageR' ts = do
     mfile <- liftIO $ findFile "page" ts fs fhs
     case mfile of
         Just (fh, ext, enum) -> do
+            mtitle <- liftIO $ fhTitle fh (fsSM fs) enum
             let widget = fhWidget fh (fsSM fs) enum
-            defaultLayout $(widgetFile "show-page")
+            defaultLayout $ do
+                maybe (return ()) (setTitle . toHtml) mtitle
+                $(widgetFile "show-page")
         Nothing -> do
             unless canWrite notFound
             defaultLayout $(widgetFile "create-wiki-page")

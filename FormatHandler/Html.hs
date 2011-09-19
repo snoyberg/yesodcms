@@ -1,8 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE FlexibleContexts #-}
 module FormatHandler.Html
     ( htmlFormatHandler
     , YesodAloha (..)
+    , splitTitle
+    , titleForm
     ) where
 
 import FormatHandler
@@ -25,23 +28,54 @@ import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.ByteString.Lazy as L
 import Data.Enumerator (enumList)
 import Text.HTML.TagSoup
+import Control.Arrow ((***))
+import Control.Applicative ((<$>), (<*>))
+import Text.Blaze (Html)
+
+splitTitle :: T.Text -> (Maybe T.Text, T.Text)
+splitTitle t =
+    case T.stripPrefix "Title: " t of
+        Just rest ->
+            let (title, rest') = T.break (== '\n') rest
+             in (Just title, T.drop 1 rest')
+        Nothing -> (Nothing, t)
+
+joinTitle :: (a -> T.Text) -> Maybe T.Text -> a -> T.Text
+joinTitle unwrap Nothing t = unwrap t
+joinTitle unwrap (Just a) t = T.concat ["Title: ", a, "\n", unwrap t]
+
+titleForm :: RenderMessage master FormMessage
+          => Field sub master a
+          -> (T.Text -> a)
+          -> (a -> T.Text)
+          -> GWidget sub master ()
+          -> Maybe T.Text
+          -> Html
+          -> Form sub master (FormResult T.Text, GWidget sub master ())
+titleForm field wrap unwrap extraWidget mt =
+    (fmap . fmap) (\(a, b) -> (a, b >> extraWidget))
+      $ renderTable $ joinTitle unwrap
+    <$> aopt textField "Title" (mtitle :: Maybe (Maybe T.Text))
+    <*> areq field "Content" (fmap wrap content)
+  where
+    (mtitle, content) = maybe (Nothing, Nothing) ((Just *** Just) . splitTitle) mt
 
 htmlFormatHandler :: (YesodAloha master, YesodJquery master) => FormatHandler master
 htmlFormatHandler = FormatHandler
     { fhExts = Set.singleton "html"
     , fhName = "HTML"
-    , fhForm = renderTable . areq alohaHtmlField "Content"
+    , fhForm = titleForm alohaHtmlField id id (return ())
     , fhWidget = widget
     , fhFilter = Just . enumList 8 . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
     , fhRefersTo = const $ const $ return []
-    , fhTitle = \_ _ -> return Nothing
+    , fhTitle = \sm uri -> fmap (fst . splitTitle) $ liftIO $ uriToText sm uri
     , fhFlatWidget = widget
     , fhToText = \sm uri -> fmap (Just . plain) $ liftIO $ uriToText sm uri
     , fhExtraParents = \_ _ -> return []
     }
   where
     widget sm uri = do
-        t <- liftIO $ uriToText sm uri
+        t <- fmap (snd . splitTitle) $ liftIO $ uriToText sm uri
         toWidget $ preEscapedText t
     plain = T.concat . mapMaybe plain' . parseTags
     plain' (TagText t) = Just t

@@ -20,7 +20,10 @@ getWikiR pieces = do
         Nothing -> defaultLayout $(widgetFile "create-wiki-page")
         Just (fh, ext, uri) -> do
             let widget = fhWidget fh (fsSM fs) uri
-            defaultLayout $(widgetFile "show-wiki-page")
+            mtitle <- liftIO $ fhTitle fh (fsSM fs) uri
+            defaultLayout $ do
+                maybe (return ()) (setTitle . toHtml) mtitle
+                $(widgetFile "show-wiki-page")
   where
     front ext = T.intercalate "/" $ pieces' ext
     pieces' ext = "wiki" : pieces ++ ["index." `T.append` ext]
