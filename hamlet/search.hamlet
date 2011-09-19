@@ -11,7 +11,7 @@
                 <legend>#{groupName $ snd $ fst grouppair}
                 $forall label <- snd grouppair
                     <div>
-                        <input type=checkbox id=label-#{toSinglePiece $ fst label} name=#{toSinglePiece $ fst $ fst grouppair} value=#{toSinglePiece $ fst label}>
+                        <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
                         <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
         <input type=submit value=Filter>
 ^{results}
