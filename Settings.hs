@@ -98,11 +98,8 @@ loadConfig env = do
     }
     where
         addPort :: Int -> String
-#ifdef PRODUCTION
-        addPort _ = ""
-#else
+        addPort 80 = ""
         addPort p = ":" ++ (show p)
-#endif
 
 -- Static setting below. Changing these requires a recompile
 
