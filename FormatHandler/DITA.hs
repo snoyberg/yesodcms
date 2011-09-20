@@ -10,7 +10,7 @@ module FormatHandler.DITA
 import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
-import DITA.Parse (loadTopicTrees, runDITA, loadDoc)
+import DITA.Parse (loadTopicTrees, runDITA, loadDoc, DITASettings (..))
 import qualified DITA.Util as DU
 import DITA.Output.HTML (renderTopicTree, hsClassMap, hsGoElem, HtmlSettings, renderElement)
 import DITA.Util.Render
@@ -60,13 +60,19 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     , fhFlatWidget = widget
     , fhFilter = xmlFilter
     , fhRefersTo = const $ const $ return []
-    , fhTitle = \sm uri -> fmap (either (const Nothing) id) $ runDITA cache sm (Just loadFileId) $ do
+    , fhTitle = \sm uri -> fmap (either (const Nothing) id) $ runDITA (ditaSettings sm) $ do
         tts <- loadTopicTrees uri
         return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts
-    , fhToText = \sm uri -> fmap (either (const Nothing) (Just . plain)) $ runDITA cache sm (Just loadFileId) $ loadTopicTrees uri
+    , fhToText = \sm uri -> fmap (either (const Nothing) (Just . plain)) $ runDITA (ditaSettings sm) $ loadTopicTrees uri
     , fhExtraParents = \_ _ -> return []
     }
   where
+    ditaSettings sm = DITASettings
+        { dsDTDCache = cache
+        , dsSchemeMap = sm
+        , dsGetFileId = Just loadFileId
+        , dsStrict = False
+        }
     -- Convert a list of topic trees to plain text, used for the search index
     plain :: [D.TopicTree] -> T.Text
     plain = T.concat . concatMap plainTT
@@ -86,7 +92,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     plainN _ = []
 
     widget sm uri = do
-        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
+        ex <- liftIO $ runDITA (ditaSettings sm) $ do
             tts <- loadTopicTrees uri
             let ri topic = RenderInfo
                     { riTopic = topic
@@ -150,7 +156,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         tm <- lift getRouteToMaster
         let root = maybe "" (r . tm) mcr
 
-        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ do
+        ex <- liftIO $ runDITA (ditaSettings sm) $ do
             doc <- cacheLoad uri
 
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
@@ -167,16 +173,16 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         -- clearing the cache
         atomicModifyIORef idocCache (\m -> (Map.delete uri m, ()))
 
-        edoc <- runDITA cache sm (Just loadFileId) $ cacheLoad uri
+        edoc <- runDITA (ditaSettings sm) $ cacheLoad uri
         case edoc of
             Left{} -> return []
             Right doc -> do
                 let navPairs = concatMap deepPairs $ docNavs doc
                 let go nav topic = (D.topicSource topic, toNavRoute uri nav (D.topicFileId topic) (D.topicId topic))
                 return $ concatMap (\(nav, tt) -> map (go nav) $ deepTopics tt) navPairs
-    , fhTitle = \sm uri -> fmap (either (const Nothing) Just) $ runDITA cache sm (Just loadFileId) $ fmap docTitle $ cacheLoad uri
+    , fhTitle = \sm uri -> fmap (either (const Nothing) Just) $ runDITA (ditaSettings sm) $ fmap docTitle $ cacheLoad uri
     , fhFlatWidget = \sm uri -> do
-        ex <- liftIO $ runDITA cache sm (Just loadFileId) $ cacheLoad uri
+        ex <- liftIO $ runDITA (ditaSettings sm) $ cacheLoad uri
         case ex of
             Left e -> toWidget [shamlet|<p>Error parsing DITA map: #{show e}|]
             Right doc -> toWidget $ mapM_ toHtml $ concatMap (showNavsDeep makeRi) $ docNavs doc
@@ -186,12 +192,18 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         case mnavid of
             Nothing -> return []
             Just navid -> do
-                edoc <- liftIO $ runDITA cache sm (Just loadFileId) $ cacheLoad uri
+                edoc <- liftIO $ runDITA (ditaSettings sm) $ cacheLoad uri
                 case edoc of
                     Left{} -> return []
                     Right doc -> return $ showNavParents uri (NavId navid) doc
     }
   where
+    ditaSettings sm = DITASettings
+        { dsDTDCache = cache
+        , dsSchemeMap = sm
+        , dsGetFileId = Just loadFileId
+        , dsStrict = False
+        }
 
     --showNavParents :: URI -> NavId -> Doc -> [(Maybe (Route master, [(T.Text, T.Text)]), T.Text)]
     showNavParents uri navid doc =
