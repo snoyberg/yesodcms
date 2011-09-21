@@ -13,6 +13,8 @@
                 <li>
                     <form style=display:inline action=@{SearchR}>
                         <input type=search name=q placeholder=Search>
+                <li>
+                    <g:plusone>
             <div #login>
                 $maybe u <- mu
                     _{MsgLoggedInAs $ userEmail $ snd u}
