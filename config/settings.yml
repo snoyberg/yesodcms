@@ -13,6 +13,5 @@ Staging:
   <<: *defaults
 
 Production:
-  approot: "http://beta.yesodweb.com"
+  approot: "http://www.yesodweb.com"
   port: 5007
-  connectionPoolSize: 10
