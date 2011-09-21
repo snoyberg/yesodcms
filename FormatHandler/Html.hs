@@ -20,7 +20,7 @@ import Text.Lucius (lucius)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
 import Text.Hamlet (shamlet)
-import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Maybe (listToMaybe, mapMaybe, fromMaybe)
 import Text.Blaze (preEscapedText)
 import qualified Data.Set as Set
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -31,6 +31,7 @@ import Text.HTML.TagSoup
 import Control.Arrow ((***))
 import Control.Applicative ((<$>), (<*>))
 import Text.Blaze (Html)
+import Network.URI.Enumerator
 
 splitTitle :: T.Text -> (Maybe T.Text, T.Text)
 splitTitle t =
@@ -75,11 +76,24 @@ htmlFormatHandler = FormatHandler
     }
   where
     widget sm uri = do
-        t <- fmap (snd . splitTitle) $ liftIO $ uriToText sm uri
+        (mtitle, t) <- fmap splitTitle $ liftIO $ uriToText sm uri
+        let title = fromMaybe (snd $ T.breakOnEnd "/" $ fromMaybe (uriPath uri) $ T.stripSuffix "/index.html" $ uriPath uri) mtitle
+        [whamlet|<h1>#{title}|]
         toWidget $ preEscapedText t
+        let youtubes = mapMaybe (T.stripPrefix "http://www.youtube.com/watch?v=") $ hrefs t
+        [whamlet|
+$if not $ null youtubes
+<div .videos>
+    $forall y <- youtubes
+        <div .video>
+            <iframe width="560" height="315" src="http://www.youtube.com/embed/#{y}" frameborder="0" allowfullscreen>
+|]
     plain = T.concat . mapMaybe plain' . parseTags
     plain' (TagText t) = Just t
     plain' _ = Nothing
+    hrefs = mapMaybe hrefs' . parseTags
+    hrefs' (TagOpen "a" as) = lookup "href" as
+    hrefs' _ = Nothing
 
 class YesodAloha a where
     urlAloha :: a -> Either (Route a) T.Text

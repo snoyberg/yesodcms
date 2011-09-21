@@ -40,7 +40,6 @@ import Text.Jasmine (minifym)
 import qualified Data.Text as T
 import Web.ClientSession (getKey)
 import Data.Text (Text)
-import Data.Monoid (mempty)
 import FormatHandler
 import FormatHandler.Html
 import FileStore

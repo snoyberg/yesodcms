@@ -5,7 +5,9 @@
                     <span>Homepage
             <ul>
                 <li>
-                    <a href=@{WikiR mempty}>Wiki
+                    <a href=@{WikiR $ return "How to Articles"}>How to Articles
+                <li>
+                    <a href=@{WikiR $ return "Videos"}>Videos
                 <li>
                     <form style=display:inline action=@{SearchR}>
                         <input type=search name=q placeholder=Search>
