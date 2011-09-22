@@ -5,25 +5,33 @@
                     <span>Homepage
             <ul>
                 <li>
+                    <g:plusone>
+                <li>
+                    $maybe u <- mu
+                        _{MsgLoggedInAs $ userEmail $ snd u}
+                        \ #
+                        <a href=@{ProfileR}>Profile
+                        \ #
+                        <a href=@{AuthR LogoutR}>_{MsgLogout}
+                    $nothing
+                        ^{apLogin authBrowserId' AuthR}
+                <li>
                     <a href=@{RootR}book>Book
                 <li>
                     <a href=@{BlogR}>Blog
                 <li>
                     <a href=@{WikiR mempty}>Wiki
                 <li>
+                    <a href="http://feeds.feedburner.com/YesodWebFramework">
+                        $with title <- asString "Yesod Web Framework Blog"
+                            <img width=14 src=@{StaticR blog_png} alt=#{title} title=#{title}>
+                <li>
+                    <a href="http://feeds.feedburner.com/YesodDocs">
+                        $with title <- asString "Yesod Web Framework Site Activity"
+                            <img width=14 src=@{StaticR feed_png} alt=#{title} title=#{title}>
+                <li>
                     <form style=display:inline action=@{SearchR}>
                         <input type=search name=q placeholder=Search>
-                <li>
-                    <g:plusone>
-            <div #login>
-                $maybe u <- mu
-                    _{MsgLoggedInAs $ userEmail $ snd u}
-                    \ #
-                    <a href=@{ProfileR}>Profile
-                    \ #
-                    <a href=@{AuthR LogoutR}>_{MsgLogout}
-                $nothing
-                    ^{apLogin authBrowserId' AuthR}
         <nav #breadcrumbs>
             $forall p <- (++) fixedParents parents'
                 $maybe url <- fst p

@@ -123,6 +123,7 @@ Last blog post: #
         atomLink BlogFeedR "Blog posts"
         atomLink ContentFeedR "Site activity"
         $(widgetFile "collapse")
+    let asString s = s :: String
     pc' <- widgetToPageContent $(widgetFile "default-layout")
     hamletToRepHtml $(hamletFile "default-layout-wrapper")
 

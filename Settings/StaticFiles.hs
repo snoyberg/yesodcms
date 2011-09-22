@@ -28,4 +28,6 @@ staticFilesList "static"
     , "custom/list-add.png"
     , "css/normalize.css"
     , "custom/style.css"
+    , "blog.png"
+    , "feed.png"
     ]

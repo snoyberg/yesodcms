@@ -68,8 +68,11 @@ form .errors {
 }
 #topbar li {
     list-style: none;
-    display: inline;
+    display: inline-block;
     padding-left: 0.5em;
+}
+#topbar p {
+    margin: 0;
 }
 nav#maptoc, nav#archive {
     display: table-cell;
