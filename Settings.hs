@@ -18,9 +18,6 @@ module Settings
     , runConnectionPool
     , staticRoot
     , staticDir
-    , loadConfig
-    , AppEnvironment(..)
-    , AppConfig(..)
     ) where
 
 import qualified Text.Hamlet as S
@@ -35,71 +32,9 @@ import Database.Persist.Postgresql
 import Yesod (liftIO, MonadControlIO, addWidget, addCassius, addJulius, addLucius, whamletFile)
 import Data.Monoid (mempty)
 import System.Directory (doesFileExist)
-import Data.Text (Text, pack, concat)
+import Data.Text (Text)
 import Prelude hiding (concat)
-import Data.Object
-import qualified Data.Object.Yaml as YAML
-import Control.Monad (join)
-
-data AppEnvironment = Test
-                    | Development
-                    | Staging
-                    | Production
-                    deriving (Eq, Show, Read, Enum, Bounded)
-
--- | Dynamic per-environment configuration loaded from the YAML file Settings.yaml.
--- Use dynamic settings to avoid the need to re-compile the application (between staging and production environments).
---
--- By convention these settings should be overwritten by any command line arguments.
--- See config/Foundation.hs for command line arguments
--- Command line arguments provide some convenience but are also required for hosting situations where a setting is read from the environment (appPort on Heroku).
---
-data AppConfig = AppConfig {
-    appEnv :: AppEnvironment
-
-  , appPort :: Int
-
-    -- | Your application will keep a connection pool and take connections from
-    -- there as necessary instead of continually creating new connections. This
-    -- value gives the maximum number of connections to be open at a given time.
-    -- If your application requests a connection when all connections are in
-    -- use, that request will fail. Try to choose a number that will work well
-    -- with the system resources available to you while providing enough
-    -- connections for your expected load.
-    --
-    -- Connections are returned to the pool as quickly as possible by
-    -- Yesod to avoid resource exhaustion. A connection is only considered in
-    -- use while within a call to runDB.
-  , connectionPoolSize :: Int
-
-    -- | The base URL for your application. This will usually be different for
-    -- development and production. Yesod automatically constructs URLs for you,
-    -- so this value must be accurate to create valid links.
-    -- Please note that there is no trailing slash.
-    --
-    -- You probably want to change this! If your domain name was "yesod.com",
-    -- you would probably want it to be:
-    -- > "http://yesod.com"
-  , appRoot :: Text
-} deriving (Show)
-
-loadConfig :: AppEnvironment -> IO AppConfig
-loadConfig env = do
-    allSettings <- (join $ YAML.decodeFile ("config/settings.yml" :: String)) >>= fromMapping
-    settings <- lookupMapping (show env) allSettings
-    hostS <- lookupScalar "host" settings
-    port <- fmap read $ lookupScalar "port" settings
-    connectionPoolSizeS <- lookupScalar "connectionPoolSize" settings
-    return $ AppConfig {
-      appEnv = env
-    , appPort = port
-    , appRoot = pack $ hostS ++ addPort port
-    , connectionPoolSize = read connectionPoolSizeS
-    }
-    where
-        addPort :: Int -> String
-        addPort 80 = ""
-        addPort p = ":" ++ (show p)
+import Yesod.Default.Config
 
 -- Static setting below. Changing these requires a recompile
 
@@ -121,7 +56,7 @@ staticDir = "static"
 -- have to make a corresponding change here.
 --
 -- To see how this value is used, see urlRenderOverride in Foundation.hs
-staticRoot :: AppConfig ->  Text
+staticRoot :: AppConfig DefaultEnv ->  Text
 staticRoot conf = [st|#{appRoot conf}/static|]
 
 
@@ -135,23 +70,10 @@ staticRoot conf = [st|#{appRoot conf}/static|]
 runConnectionPool :: MonadControlIO m => SqlPersist m a -> ConnectionPool -> m a
 runConnectionPool = runSqlPool
 
-withConnectionPool :: MonadControlIO m => AppConfig -> (ConnectionPool -> m a) -> m a
+withConnectionPool :: MonadControlIO m => AppConfig DefaultEnv -> (ConnectionPool -> m a) -> m a
 withConnectionPool conf f = do
-    cs <- liftIO $ loadConnStr (appEnv conf)
-    withPostgresqlPool cs (connectionPoolSize conf) f
-  where
-    -- | The database connection string. The meaning of this string is backend-
-    -- specific.
-    loadConnStr :: AppEnvironment -> IO Text
-    loadConnStr env = do
-        allSettings <- (join $ YAML.decodeFile ("config/postgresql.yml" :: String)) >>= fromMapping
-        settings <- lookupMapping (show env) allSettings
-        database <- lookupScalar "database" settings :: IO Text
-
-        connPart <- fmap concat $ (flip mapM) ["user", "password", "host", "port"] $ \key -> do
-          value <- lookupScalar key settings
-          return $ [st| #{key}=#{value} |]
-        return $ [st|#{connPart} dbname=#{database}|]
+    dbConf <- liftIO $ loadPostgresql (appEnv conf)
+    withPostgresqlPool (pgConnStr dbConf) (pgPoolSize dbConf) f
 
 -- Example of making a dynamic configuration static
 -- use /return $(mkConnStr Production)/ instead of loadConnStr

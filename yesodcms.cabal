@@ -73,7 +73,8 @@ executable         yesodcms
                  , yesod        >= 0.9     && < 0.10
                  , yesod-core   >= 0.9.3
                  , yesod-auth   >= 0.7.3
-                 , yesod-static
+                 , yesod-static >= 0.3.1
+                 , yesod-default
                  , blaze-html
                  , yesod-form   >= 0.3.3
                  , mime-mail

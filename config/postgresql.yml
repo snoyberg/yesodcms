@@ -4,6 +4,7 @@ Default: &defaults
   host: localhost
   port: 5432
   database: yesodcms
+  poolsize: 10
 
 Development:
   <<: *defaults
@@ -14,7 +15,10 @@ Test:
 
 Staging:
   database: yesodcms_staging
+  poolsize: 100
+  <<: *defaults
 
 Production:
   database: yesodcms_production
+  poolsize: 100
   <<: *defaults

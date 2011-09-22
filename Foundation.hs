@@ -28,6 +28,7 @@ import Settings.StaticFiles
 import Yesod.Auth
 import Yesod.Auth.BrowserId (authBrowserId')
 import Yesod.Logger (Logger, logLazyText)
+import Yesod.Default.Config
 import qualified Settings
 import System.Directory
 import qualified Data.ByteString.Lazy as L
@@ -54,7 +55,7 @@ import Data.IORef (IORef)
 -- starts running, such as database connections. Every handler will have
 -- access to the data present here.
 data Cms = Cms
-    { settings :: Settings.AppConfig
+    { settings :: AppConfig DefaultEnv
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
@@ -111,7 +112,7 @@ defaultLayoutExtraParents parents' widget = do
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod Cms where
-    approot = Settings.appRoot . settings
+    approot = appRoot . settings
 
     clientSessionDuration _ = 60 * 24 * 14
 

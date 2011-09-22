@@ -12,11 +12,12 @@ import Foundation
 import Settings
 import Settings.StaticFiles (static)
 import Yesod.Auth
-import Yesod.Logger (makeLogger, flushLogger, Logger, logString, logLazyText)
+import Yesod.Logger (Logger)
+import Yesod.Default.Config
+import Yesod.Default.Main
 import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
 import Data.Dynamic (Dynamic, toDyn)
-import Network.Wai.Middleware.Debug (debugHandle)
 import FormatHandler.Html
 import FormatHandler.Text
 import FormatHandler.Markdown
@@ -74,7 +75,7 @@ getRobotsR = return $ RepPlain $ toContent ("User-agent: *" :: ByteString)
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-withCms :: AppConfig -> Logger -> (Application -> IO a) -> IO ()
+withCms :: AppConfig DefaultEnv -> Logger -> (Application -> IO a) -> IO ()
 withCms conf logger f = do
     s <- static Settings.staticDir
     Settings.withConnectionPool conf $ \p -> do
@@ -142,19 +143,7 @@ book ialiases app req = do
 
 -- for yesod devel
 withDevelAppPort :: Dynamic
-withDevelAppPort =
-    toDyn go
-  where
-    go :: ((Int, Application) -> IO ()) -> IO ()
-    go f = do
-        conf <- Settings.loadConfig Settings.Development
-        let port = appPort conf
-        logger <- makeLogger
-        logString logger $ "Devel application launched, listening on port " ++ show port
-        withCms conf logger $ \app -> f (port, debugHandle (logHandle logger) app)
-        flushLogger logger
-      where
-        logHandle logger msg = logLazyText logger msg >> flushLogger logger
+withDevelAppPort = toDyn $ defaultDevelApp withCms
 
 toDocRoute :: URI -> CmsRoute
 toDocRoute uri = RedirectorR $ uriPath uri

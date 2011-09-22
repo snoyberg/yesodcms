@@ -1,5 +1,5 @@
 Default: &defaults
-  host: "http://10.0.0.3"
+  host: "10.0.0.3"
   port: 3000
   connectionPoolSize: 10
 
@@ -13,6 +13,6 @@ Staging:
   <<: *defaults
 
 Production:
-  host: "http://beta.yesodweb.com"
+  approot: "http://beta.yesodweb.com"
   port: 5007
   connectionPoolSize: 10
