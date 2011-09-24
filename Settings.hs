@@ -28,13 +28,14 @@ import qualified Text.Shakespeare.Text as S
 import Text.Shakespeare.Text (st)
 import Language.Haskell.TH.Syntax
 import Database.Persist.Postgresql
+import Database.Persist.Base (loadConfig)
 
-import Yesod (liftIO, MonadControlIO, addWidget, addCassius, addJulius, addLucius, whamletFile)
+import Yesod (liftIO, MonadControlIO, addWidget, addCassius, addJulius, addLucius, whamletFile, withYamlEnvironment)
 import Data.Monoid (mempty)
 import System.Directory (doesFileExist)
 import Data.Text (Text)
 import Prelude hiding (concat)
-import Yesod.Default.Config
+import Yesod.Default.Config (AppConfig (..), DefaultEnv)
 
 -- Static setting below. Changing these requires a recompile
 
@@ -72,7 +73,7 @@ runConnectionPool = runSqlPool
 
 withConnectionPool :: MonadControlIO m => AppConfig DefaultEnv -> (ConnectionPool -> m a) -> m a
 withConnectionPool conf f = do
-    dbConf <- liftIO $ loadPostgresql (appEnv conf)
+    dbConf <- liftIO $ withYamlEnvironment "config/postgresql.yml" (appEnv conf) $ either error return . loadConfig
     withPostgresqlPool (pgConnStr dbConf) (pgPoolSize dbConf) f
 
 -- Example of making a dynamic configuration static
