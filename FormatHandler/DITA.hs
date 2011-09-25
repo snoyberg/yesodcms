@@ -52,7 +52,6 @@ import Data.Char (isUpper)
 
 import qualified Text.Highlighting.Illuminate as I
 import qualified Text.Highlighting.Illuminate.Haskell as Haskell
-import qualified Text.Highlighting.Illuminate.LiterateHaskell as LHaskell
 import qualified Text.Highlighting.Illuminate.HTML as HTML
 import qualified Text.Highlighting.Illuminate.CSS as CSS
 import qualified Text.Highlighting.Illuminate.Javascript as Javascript
@@ -382,11 +381,11 @@ highlighters = Map.fromList
     , ("julius", Javascript.lexer)
     , ("javascript", Javascript.lexer)
     , ("haskell", Haskell.lexer)
-    , ("lhaskell", LHaskell.lexer)
     ]
 
 goElem :: Class -> RenderInfo HtmlSettings -> D.Element -> Maybe [Node]
 goElem "pr-d/codeblock" _ e@(D.Element _ _ _ [D.NodeContent t])
+    | Just "lhaskell" == getAttrText "outputclass" e = lhaskellToHTML t
     | Just lexer <- getAttrText "outputclass" e >>= flip Map.lookup highlighters = highlight lexer t
 goElem "pr-d/apiname" _ (D.Element _ _ _ [D.NodeContent t]) =
     let (href, display) = renderApiname t
@@ -451,3 +450,52 @@ renderApiname a
         , ":"
         , ident
         ]
+
+lhaskellToHTML :: T.Text -> Maybe [Node]
+lhaskellToHTML =
+    go' 1 . map go . T.lines . T.filter (/= '\r')
+  where
+    go :: T.Text -> Either [Node] T.Text
+    go t
+        | a == "> " = Right b
+        | a' == ">" = Right b'
+        | otherwise = Left $
+            case htmlToNodes t of
+                Nothing -> [xml|<p>#{t}|]
+                Just ns -> [xml|<p>^{ns}|]
+      where
+        (a, b) = T.splitAt 2 t
+        (a', b') = T.splitAt 1 t
+
+    go' :: Int -> [Either [Node] T.Text] -> Maybe [Node]
+    go' _ [] = Just []
+    go' i (Left x:xs) = do
+        ns <- go' i xs
+        Just $ x ++ ns
+    go' i x = do
+        y' <- haskellToHTML i (T.unlines y)
+        ns <- go' (i + length y) z
+        Just $ y' ++ ns
+      where
+        (y, z) = someRights id x
+    someRights front (Right x:xs) = someRights (front . (:) x) xs
+    someRights front x = (front [], x)
+
+haskellToHTML :: Int -> T.Text -> Maybe [Node]
+haskellToHTML line t = do
+    ts <- either (const Nothing) Just $ I.tokenize (Just Haskell.lexer) $ T.unpack t
+    let h = T.pack $ Text.XHtml.showHtmlFragment $ I.toXHtmlInline (I.defaultOptions
+                { I.optNumberLines = True
+                , I.optStartNumber = line
+                }) ts
+    ns <- htmlToNodes h
+    return [xml|<div class=haskell>^{ns}|]
+
+htmlToNodes :: T.Text -> Maybe [Node]
+htmlToNodes t = either (const Nothing) (Just . go) $ parseText def $ TL.fromChunks
+        [ "<dummy>"
+        , t
+        , "</dummy>"
+        ]
+  where
+    go (Document _ (Element _ _ ns) _) = ns
