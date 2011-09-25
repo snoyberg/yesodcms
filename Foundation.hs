@@ -236,6 +236,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb (PageR x ys) = return (last ys, Just $ PageR x $ init ys)
 
     breadcrumb (EditPageR page) = return ("Edit page: " `T.append` (T.intercalate "/" page), Just RootR)
+    breadcrumb (DeletePageR page) = return ("Delete page", Just $ EditPageR page)
     breadcrumb ProfileR = return ("Profile", Just RootR)
 
     breadcrumb UsersR = return ("User list", Just RootR)

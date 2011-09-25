@@ -10,6 +10,7 @@
 /page/#Text/*Texts PageR GET
 
 /edit/*Texts EditPageR GET POST
+/delete/*Texts DeletePageR GET POST
 
 /home UsersR GET
 /home/#Text/*Texts UserFileR GET POST

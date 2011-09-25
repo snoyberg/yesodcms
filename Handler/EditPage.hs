@@ -5,6 +5,8 @@ module Handler.EditPage
     , postFileLabelsR
     , routes
     , setCanons
+    , getDeletePageR
+    , postDeletePageR
     ) where
 
 import Foundation
@@ -23,6 +25,7 @@ import Control.Monad (unless, forM_, filterM)
 import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
 import Handler.Profile (getLabels)
+import Control.Applicative (pure)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
@@ -84,15 +87,25 @@ postEditPageR ts = do
     checkPerms ts
     toDelete <- runInputPost $ iopt textField "delete"
     case toDelete of
-        Just{} -> do
-            -- FIXME Delete confirmation
+        Just{} -> redirect RedirectTemporary $ DeletePageR ts
+        Nothing -> getEditPageR ts
+
+getDeletePageR, postDeletePageR :: [T.Text] -> Handler RepHtml
+getDeletePageR = postDeletePageR
+postDeletePageR ts = do
+    checkPerms ts
+    ((res, widget), enctype) <- runFormPost $ renderDivs $ pure () -- Just getting a nonce...
+    mconfirm <- runInputPost $ iopt textField "confirm"
+    liftIO $ print (res, mconfirm)
+    case (res, mconfirm) of
+        (FormSuccess (), Just{}) -> do
             Cms { fileStore = fs } <- getYesod
             let t = T.intercalate "/" ts
             liftIO $ fsDelete fs t
             setMessage "Page deleted"
             runDB $ addFeedItem "Page deleted" (RedirectorR t) [] [shamlet|Page deleted: #{t}|]
             redirect RedirectTemporary RootR
-        Nothing -> getEditPageR ts
+        _ -> defaultLayout $(widgetFile "delete-page")
 
 setCanons :: FileStorePath -> YesodDB Cms Cms ()
 setCanons t = do

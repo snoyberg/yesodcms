@@ -1,0 +1,6 @@
+<p>Really delete?
+<form method=post enctype=#{enctype}>
+    ^{widget}
+    <input type=submit name=confirm value="Yes, delete it">
+    \ #
+    <a href=@{EditPageR ts}>No, don't delete it.
