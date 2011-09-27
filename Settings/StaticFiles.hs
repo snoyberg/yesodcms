@@ -28,4 +28,7 @@ staticFilesList "static"
     , "custom/list-add.png"
     , "css/normalize.css"
     , "custom/style.css"
+    , "print.png"
+    , "epub.png"
+    , "pdf.png"
     ]

@@ -4,7 +4,7 @@
                 <a href=@{RootR}>
                     <span>Homepage
             <ul>
-                $if hasCart
+                $maybe _ <- mu
                     <li>
                         <a href=@{CartR}>MyDocs
                 <li>

@@ -97,10 +97,6 @@ defaultLayoutExtraParents parents' widget = do
     tm <- getRouteToMaster
     cr <- getCurrentRoute
     let isHome = Just RootR == fmap tm cr
-    hasCart <-
-        case mu of
-            Nothing -> return False
-            Just (uid, _) -> runDB $ fmap (> 0) $ count [CartUser ==. uid]
     pc <- widgetToPageContent $ do
         setTitle $ toHtml title'
         widget

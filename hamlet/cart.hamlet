@@ -3,7 +3,14 @@ $if null carts
     <p>You have not added any docs.
 $else
     <p>
-        <a href=@{CartPrintR}>Print
+        <a href=@{CartPrintR}>
+            <img src=@{StaticR print_png} alt=Print>
+        \ #
+        <a href="javascript:alert('Not yet functional')">
+            <img src=@{StaticR pdf_png} alt=PDF>
+        \ #
+        <a href="javascript:alert('Not yet functional')">
+            <img src=@{StaticR epub_png} alt=ePub>
     <table>
         $forall cart <- carts
             <tr>

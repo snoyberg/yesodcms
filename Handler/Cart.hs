@@ -15,6 +15,7 @@ import Control.Monad (unless)
 import Data.Monoid (mconcat)
 import FileStore
 import FormatHandler
+import Settings.StaticFiles
 
 getCartR :: Handler RepHtml
 getCartR = do
