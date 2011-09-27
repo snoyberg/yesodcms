@@ -1,0 +1,13 @@
+$(function(){
+    $("a[data-raw]").click(function(){
+        var $this = $(this);
+        var $gramps = $this.parent().parent();
+        var $ajax = $gramps.children("div.ajax");
+        if ($ajax.length) {
+            $ajax.toggleClass("hidden");
+        } else {
+            $gramps.append("<div class='ajax'/>").children("div.ajax").load($this.attr("data-raw"));
+        }
+        return false;
+    });
+});

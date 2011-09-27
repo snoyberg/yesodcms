@@ -278,3 +278,4 @@ instance YesodBreadcrumbs Cms where
     breadcrumb LabelsR{} = return ("", Nothing)
     breadcrumb DeleteLabelR{} = return ("", Nothing)
     breadcrumb FileLabelsR{} = return ("", Nothing)
+    breadcrumb RawR{} = return ("", Nothing)

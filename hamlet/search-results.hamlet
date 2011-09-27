@@ -3,7 +3,7 @@
     $forall mi <- mis
         <div .result>
             <div .link>
-                <a href=@{RedirectorR $ miFile mi}>
+                <a href=@{RedirectorR $ miFile mi} data-raw=@{RawR $ miFile mi}>
                     #{miTitle mi}
             <div .excerpt>
                 \#{preEscapedLazyText $ miExcerpt mi}

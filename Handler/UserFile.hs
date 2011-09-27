@@ -5,6 +5,7 @@ module Handler.UserFile
     , getUserFileR
     , postUserFileR
     , getRedirectorR
+    , getRawR
     , postCreateBlogR
     , postCreateAliasR
     ) where
@@ -277,3 +278,16 @@ getRedirectorR t =
         (_, r):_ -> do
             gets <- reqGetParams `fmap` getRequest
             redirectParams RedirectPermanent r gets
+
+getRawR :: T.Text -> Handler RepHtml
+getRawR t = do
+    Cms { fileStore = fs, formatHandlers = fhs } <- getYesod
+    muri <- liftIO $ fsGetFile fs t
+    uri <- maybe notFound return muri
+    let ext = snd $ T.breakOnEnd "." t
+    fh <- maybe notFound return $ findHandler ext fhs
+    pc <- widgetToPageContent $ fhFlatWidget fh (fsSM fs) uri
+    hamletToRepHtml [hamlet|
+<a .inner-link href=@{RedirectorR t}>Open
+^{pageBody pc}
+|]
