@@ -4,6 +4,9 @@
                 <a href=@{RootR}>
                     <span>Homepage
             <ul>
+                $if hasCart
+                    <li>
+                        <a href=@{CartR}>MyDocs
                 <li>
                     <a href=@{WikiR $ return "How to Articles"}>How to Articles
                 <li>

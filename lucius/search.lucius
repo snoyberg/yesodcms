@@ -17,3 +17,8 @@ fieldset div:first-of-type {
 fieldset {
     margin-bottom: 2em;
 }
+.cart-added {
+    font-style: italic;
+    padding-left: 1em;
+    color: #900;
+}

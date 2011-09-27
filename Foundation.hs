@@ -97,6 +97,10 @@ defaultLayoutExtraParents parents' widget = do
     tm <- getRouteToMaster
     cr <- getCurrentRoute
     let isHome = Just RootR == fmap tm cr
+    hasCart <-
+        case mu of
+            Nothing -> return False
+            Just (uid, _) -> runDB $ fmap (> 0) $ count [CartUser ==. uid]
     pc <- widgetToPageContent $ do
         setTitle $ toHtml title'
         widget
@@ -254,6 +258,8 @@ instance YesodBreadcrumbs Cms where
 
     breadcrumb SearchR = return ("Search", Just RootR)
 
+    breadcrumb CartR = return ("MyDocs", Just RootR)
+
     breadcrumb StaticR{} = return ("", Nothing)
     breadcrumb AuthR{} = return ("", Nothing)
     breadcrumb FaviconR{} = return ("", Nothing)
@@ -278,3 +284,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb DeleteLabelR{} = return ("", Nothing)
     breadcrumb FileLabelsR{} = return ("", Nothing)
     breadcrumb RawR{} = return ("", Nothing)
+    breadcrumb AddCartR{} = return ("", Nothing)
+    breadcrumb UpCartR{} = return ("", Nothing)
+    breadcrumb DownCartR{} = return ("", Nothing)
+    breadcrumb DeleteCartR{} = return ("", Nothing)

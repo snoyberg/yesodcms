@@ -1,0 +1,18 @@
+<h1>MyDocs
+$if null carts
+    <p>You have not added any docs.
+$else
+    <table>
+        $forall cart <- carts
+            <tr>
+                <td>
+                    <a href=@{fst $ snd cart}>#{snd $ snd cart}
+                <td>
+                    <form method=post action=@{DeleteCartR $ fst cart}>
+                        <input type=submit value=Delete>
+                <td>
+                    <form method=post action=@{UpCartR $ fst cart}>
+                        <input type=submit value=Up>
+                <td>
+                    <form method=post action=@{DownCartR $ fst cart}>
+                        <input type=submit value=Down>

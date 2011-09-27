@@ -7,6 +7,7 @@ module Handler.EditPage
     , setCanons
     , getDeletePageR
     , postDeletePageR
+    , getFileNameId
     ) where
 
 import Foundation
@@ -61,7 +62,7 @@ getEditPageR ts = do
         _ -> return ()
     let toView = isJust mcontents || isSucc res
     labels <- runDB getLabels
-    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
+    fid <- runDB $ getFileNameId t
     myLabels <- fmap (map $ fileLabelLabel . snd) $ runDB $ selectList [FileLabelFile ==. fid] []
     let isChecked = flip elem myLabels
     defaultLayout $(widgetFile "edit-page")
@@ -132,11 +133,15 @@ setCanons t = do
                                     }
                                 return ()
 
+getFileNameId :: T.Text -> YesodDB Cms Cms FileNameId
+getFileNameId t =
+    fmap (either fst id) $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
+
 postFileLabelsR :: [T.Text] -> Handler ()
 postFileLabelsR ts = do
     checkPerms ts
     let t = T.intercalate "/" ts
-    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
+    fid <- runDB $ getFileNameId t
     (posts, _) <- runRequestBody
     let isLabelId = fmap (maybe False (const True)) . get
     lids <- runDB $ filterM isLabelId $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") posts

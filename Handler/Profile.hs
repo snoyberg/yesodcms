@@ -86,7 +86,7 @@ postGroupsR = do
     requireAdmin
     name <- runInputPost $ ireq textField "name"
     x <- runDB $ do
-        x <- insertBy (Group name 1000)
+        x <- insertBy (Group name 100000)
         fixGroups
         return x
     case x of

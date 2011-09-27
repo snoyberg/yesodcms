@@ -10,4 +10,11 @@ $(function(){
         }
         return false;
     });
+    $("form.addcart > input[type=submit]").live("click", function(data){
+        var $form = $(this).parent();
+        $.post($form.attr("action"), function(){
+            $form.before("<span class='cart-added'>Added to MyDocs</span>").detach();
+        });
+        return false;
+    });
 });

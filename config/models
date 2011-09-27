@@ -53,3 +53,8 @@ FileLabel
     file FileNameId
     label LabelId
     UniqueFileLabel file label
+Cart
+    user UserId
+    file FileNameId
+    priority Int
+    UniqueCart user file

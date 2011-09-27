@@ -35,6 +35,7 @@ import Yesod.Goodies.Gravatar
 import Data.Time
 import Network.HTTP.Enumerator
 import Data.IORef (writeIORef)
+import Handler.EditPage (getFileNameId)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -287,7 +288,19 @@ getRawR t = do
     let ext = snd $ T.breakOnEnd "." t
     fh <- maybe notFound return $ findHandler ext fhs
     pc <- widgetToPageContent $ fhFlatWidget fh (fsSM fs) uri
+    showAdd <- do
+        muid <- maybeAuthId
+        case muid of
+            Nothing -> return False
+            Just uid -> runDB $ do
+                fid <- getFileNameId t
+                x <- getBy $ UniqueCart uid fid
+                return $ maybe True (const False) x
     hamletToRepHtml [hamlet|
-<a .inner-link href=@{RedirectorR t}>Open
+<div>
+    <a .inner-link href=@{RedirectorR t}>Open
+    $if showAdd
+        <form .addcart style=display:inline-block;margin-left:5px method=post action=@{AddCartR t}>
+            <input type=submit value="Add to MyDocs">
 ^{pageBody pc}
 |]
