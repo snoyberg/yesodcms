@@ -2,6 +2,8 @@
 $if null carts
     <p>You have not added any docs.
 $else
+    <p>
+        <a href=@{CartPrintR}>Print
     <table>
         $forall cart <- carts
             <tr>

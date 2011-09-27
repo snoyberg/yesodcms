@@ -5,12 +5,16 @@ module Handler.Cart
     , postUpCartR
     , postDownCartR
     , postDeleteCartR
+    , getCartPrintR
     ) where
 
 import Foundation
 import qualified Data.Text as T
 import Handler.EditPage (getFileNameId)
 import Control.Monad (unless)
+import Data.Monoid (mconcat)
+import FileStore
+import FormatHandler
 
 getCartR :: Handler RepHtml
 getCartR = do
@@ -69,3 +73,38 @@ requireOwner cid = do
     c <- runDB $ get404 cid
     unless (uid == cartUser c) $ permissionDenied "That's not your document"
     return uid
+
+getCartPrintR :: Handler RepHtml
+getCartPrintR = do
+    uid <- requireAuthId
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    widgets <- runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(_, c) -> do
+        file <- get404 $ cartFile c
+        let t = T.drop 3 $ fileNameUri file
+        title <-
+            case fileNameTitle file of
+                Just t' -> return t'
+                Nothing -> fileTitle' fs fhs t
+
+        muri <- liftIO $ fsGetFile fs t
+        let ext = snd $ T.breakOnEnd "." t
+        let mfh = findHandler ext fhs
+        let widget =
+                case (muri, mfh) of
+                    (Just uri, Just fh) -> fhFlatWidget fh (fsSM fs) uri
+                    _ -> [whamlet|<p>Error producing output|]
+
+        return [whamlet|
+<h1>#{title}
+^{widget}
+|]
+        )
+    pc <- widgetToPageContent $ mconcat widgets
+    hamletToRepHtml [hamlet|
+!!!
+<html>
+    <head>
+        <title>MyDocs
+    <body>
+        ^{pageBody pc}
+|]

@@ -48,8 +48,9 @@
 /labels/#LabelId/delete DeleteLabelR POST
 /file-labels/*Texts FileLabelsR POST
 
-/cart/#Text AddCartR POST
+/cart/#Text/add AddCartR POST
 /cart CartR GET
+/cart/print CartPrintR GET
 /cart/#CartId/delete DeleteCartR POST
 /cart/#CartId/up UpCartR POST
 /cart/#CartId/down DownCartR POST

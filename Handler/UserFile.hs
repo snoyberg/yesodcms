@@ -288,8 +288,8 @@ getRawR t = do
     let ext = snd $ T.breakOnEnd "." t
     fh <- maybe notFound return $ findHandler ext fhs
     pc <- widgetToPageContent $ fhFlatWidget fh (fsSM fs) uri
-    showAdd <- do
-        muid <- maybeAuthId
+    muid <- maybeAuthId
+    showAdd <-
         case muid of
             Nothing -> return False
             Just uid -> runDB $ do
@@ -300,7 +300,10 @@ getRawR t = do
 <div>
     <a .inner-link href=@{RedirectorR t}>Open
     $if showAdd
-        <form .addcart style=display:inline-block;margin-left:5px method=post action=@{AddCartR t}>
+        <form .addcart style=display:inline-block;margin-left:2em method=post action=@{AddCartR t}>
             <input type=submit value="Add to MyDocs">
+    $else
+        $maybe _ <- muid
+            <a style=display:inline-block;margin-left:2em;color:#900 href=@{CartR}>In MyDocs
 ^{pageBody pc}
 |]
