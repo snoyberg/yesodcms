@@ -72,6 +72,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
         , dsSchemeMap = sm
         , dsGetFileId = Just loadFileId
         , dsStrict = False
+        , dsDitaval = def
         }
     -- Convert a list of topic trees to plain text, used for the search index
     plain :: [D.TopicTree] -> T.Text
@@ -203,6 +204,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         , dsSchemeMap = sm
         , dsGetFileId = Just loadFileId
         , dsStrict = False
+        , dsDitaval = def
         }
 
     --showNavParents :: URI -> NavId -> Doc -> [(Maybe (Route master, [(T.Text, T.Text)]), T.Text)]
