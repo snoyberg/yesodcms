@@ -36,6 +36,14 @@ data MInfo = MInfo
     , miExcerpt :: TL.Text
     }
 
+safeTail :: [a] -> [a]
+safeTail [] = []
+safeTail (_:xs) = xs
+
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x:_) = Just x
+
 -- | Convert a raw list of labels into a map grouped by the label group.
 groupLabels :: [LabelId] -> YesodDB Cms Cms (Map.Map GroupId (Set.Set LabelId))
 groupLabels = fmap (Map.unionsWith Set.union) . mapM (\lid -> do

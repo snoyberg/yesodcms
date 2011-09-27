@@ -6,7 +6,7 @@
             \ #
             <input type=submit value=Search>
         <h2>Refine Search
-        $forall grouppair <- labels
+        $forall grouppair <- safeTail labels
             <fieldset>
                 <legend>#{groupName $ snd $ fst grouppair}
                 $forall label <- snd grouppair
