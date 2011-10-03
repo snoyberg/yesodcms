@@ -49,6 +49,7 @@ import Blaze.ByteString.Builder (toByteString, fromByteString)
 import Network.Wai (rawQueryString, rawPathInfo)
 import Network.HTTP.Types (parseQuery)
 import Data.Char (isUpper)
+import Text.Pandoc (writeHtmlString, defaultWriterOptions, readMarkdown, defaultParserState)
 
 import qualified Text.Highlighting.Illuminate as I
 import qualified Text.Highlighting.Illuminate.Haskell as Haskell
@@ -390,8 +391,11 @@ goElem "pr-d/codeblock" _ e@(D.Element _ _ _ [D.NodeContent t])
 goElem "pr-d/apiname" _ (D.Element _ _ _ [D.NodeContent t]) =
     let (href, display) = renderApiname t
      in Just [xml|<a href=#{href}>#{display}|]
+goElem "topic/foreign" _ e@(D.Element _ _ _ [D.NodeContent t]) =
+    case getAttrText "outputclass" e of
+        Just "markdown" -> markdownToXML t
+        _ -> Nothing
 goElem _ _ _ = Nothing
-
 
 navShortDesc :: Nav -> Maybe D.Element
 navShortDesc Nav { navTopicTree = Just (D.TopicTree { D.ttTopic = D.Topic { topicContent = content } }) } =
@@ -499,3 +503,6 @@ htmlToNodes t = either (const Nothing) (Just . go) $ parseText def $ TL.fromChun
         ]
   where
     go (Document _ (Element _ _ ns) _) = ns
+
+markdownToXML :: T.Text -> Maybe [Node]
+markdownToXML = htmlToNodes . T.pack . writeHtmlString defaultWriterOptions . readMarkdown defaultParserState . T.unpack . T.filter (/= '\r')
