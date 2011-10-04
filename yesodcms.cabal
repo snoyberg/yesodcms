@@ -107,7 +107,8 @@ executable         yesodcms
                  , dita
                  , xml-enumerator       >= 0.4.2    && < 0.5
                  , xml2html
-                 , xml-catalog          >= 0.1      && < 0.2
+                 , xml-catalog          >= 0.2      && < 0.3
+                 , dtd                  >= 0.0      && < 0.1
                  , http-types
                  , xml-hamlet
                  , spoon

@@ -19,7 +19,7 @@ import Text.XML
 import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
-import qualified Text.XML.Catalog as C
+import Data.DTD.Cache
 import DITA.Types (topicTitle, ttTopic, Href, Doc (..), Nav (..), NavId (..), Class (..), ttChildren, topicContent)
 import DITA.Util (text)
 import Control.Monad (unless)
@@ -48,7 +48,7 @@ import Network.Wai (rawQueryString, rawPathInfo)
 import Network.HTTP.Types (parseQuery)
 
 ditaFormatHandler :: (Href -> T.Text)
-                  -> C.DTDCache IO
+                  -> DTDCache
                   -> ClassMap
                   -> (URI -> IO D.FileId)
                   -> FormatHandler master
@@ -122,7 +122,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
 
 ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      => (Href -> T.Text)
-                     -> C.DTDCache IO
+                     -> DTDCache
                      -> ClassMap
                      -> (URI -> IO D.FileId)
                      -> IORef (Map.Map URI Doc)

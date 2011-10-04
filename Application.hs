@@ -26,7 +26,7 @@ import FileStore
 import Network.URI.Enumerator
 import qualified Network.URI.Enumerator.File as File
 import DITA.Util.ClassMap (loadClassMap)
-import qualified Text.XML.Catalog as C
+import Data.DTD.Cache
 import DITA.Types (hrefFile, NavId (..), FileId (..))
 import qualified DITA.Types as D
 import qualified Data.Map as Map
@@ -80,11 +80,10 @@ withCms conf logger f = do
     s <- static Settings.staticDir
     Settings.withConnectionPool conf $ \p -> do
         runConnectionPool (runMigration migrateAll) p
-        catalog <- File.decodeString "dita/catalog-dita.xml"
         cm <- File.decodeString "dita/classmap.css"
         let sm = toSchemeMap [File.fileScheme]
         classmap <- loadClassMap sm cm
-        cache <- C.loadCatalog sm catalog >>= flip (C.newDTDCache "dtd-flatten.jar") sm
+        cache <- newDTDCacheFile "dita/catalog-dita.xml"
         let raw = Map.fromList
                 [ ("png", "image/png")
                 , ("gif", "image/gif")
