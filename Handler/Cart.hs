@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Cart
     ( getCartR
+    , getCartWidget
     , postAddCartR
     , postUpCartR
     , postDownCartR
@@ -17,20 +18,22 @@ import FileStore
 import FormatHandler
 import Settings.StaticFiles
 
-getCartR :: Handler RepHtml
-getCartR = do
-    uid <- requireAuthId
-    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
-    carts <- runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(cid, c) -> do
+getCartWidget :: Bool -> UserId -> Widget
+getCartWidget title uid = do
+    Cms { formatHandlers = fhs, fileStore = fs } <- lift getYesod
+    carts <- lift $ runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(cid, c) -> do
         file <- get404 $ cartFile c
         let t = T.drop 3 $ fileNameUri file
-        title <-
+        title' <-
             case fileNameTitle file of
                 Just t' -> return t'
                 Nothing -> fileTitle' fs fhs t
-        return (cid, (RedirectorR t, title))
+        return (cid, (RedirectorR t, title'))
         )
-    defaultLayout $(widgetFile "cart")
+    $(widgetFile "cart")
+
+getCartR :: Handler RepHtml
+getCartR = requireAuthId >>= defaultLayout . getCartWidget True
 
 postAddCartR :: T.Text -> Handler ()
 postAddCartR t = do

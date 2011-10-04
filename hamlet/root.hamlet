@@ -2,10 +2,14 @@
     <section .column>
         <h1>New Knowledge Community Posts
         <div>
-            <ul>
-                $forall article <- articles
-                    <li>
-                        <a href=@{articleLink article}>#{articleTitle article}
+            $forall article <- articles
+                <p .article>
+                    <a href=@{aiLink article}>#{aiTitle article}
+                    <span .author>
+                        Added by #{aiUser article}, #
+                        <span .timestamp>#{aiTimestamp article}
+                    $if not $ T.null $ aiLabels article
+                        <span .labels>#{aiLabels article}
     <section .column .active>
         <h1>Search Knowledge Community
         <div>
@@ -34,3 +38,8 @@
             $nothing
                 <p>In order to add content, you need to login
                 ^{apLogin authBrowserId' AuthR}
+    $maybe cart <- mcart
+        <section .column>
+            <h1>MyDocs
+            <div>
+                ^{cart}

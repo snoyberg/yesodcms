@@ -17,12 +17,26 @@ article {
     display: none;
 }
 
+.column > h1 {
+    -webkit-transform: rotate(90deg);
+    -webkit-transform-origin-y: 2em;
+    -webkit-transition: -webkit-transform 0.25s linear;
+}
+
+.author {
+    display: block;
+    font-style: italic;
+}
+
 .column.active {
     width: 550px;
     font-size: 1em;
 }
 .column.active > div {
     display: block;
+}
+.column.active > h1 {
+    -webkit-transform: none;
 }
 
 .column h2 {

@@ -17,7 +17,7 @@ import FileStore
 import Data.Enumerator (($$), run_, enumList)
 import Data.Enumerator.List (consume)
 import qualified Data.ByteString as S
-import Data.Maybe (isJust, mapMaybe)
+import Data.Maybe (isJust, mapMaybe, fromMaybe)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
@@ -65,6 +65,8 @@ getEditPageR ts = do
     fid <- runDB $ getFileNameId t
     myLabels <- fmap (map $ fileLabelLabel . snd) $ runDB $ selectList [FileLabelFile ==. fid] []
     let isChecked = flip elem myLabels
+    isLabels' <- runInputGet $ iopt boolField "labels"
+    let isLabels = fromMaybe False isLabels'
     defaultLayout $(widgetFile "edit-page")
   where
     isSucc FormSuccess{} = True

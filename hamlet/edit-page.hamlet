@@ -1,11 +1,12 @@
-<form method=post enctype=#{enctype}>
-    <table>
-        ^{widget}
-        <tr>
-            <td colspan=3>
-                <input type=submit value="Update Topic">
-                \ #
-                <input type=submit name=delete value="Delete File">
+$if not isLabels
+    <form method=post enctype=#{enctype}>
+        <table>
+            ^{widget}
+            <tr>
+                <td colspan=3>
+                    <input type=submit value="Update Topic">
+                    \ #
+                    <input type=submit name=delete value="Delete File">
 $if not $ null labels
     <h2>Labels
     <form method=post action=@{FileLabelsR ts}>

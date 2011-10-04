@@ -22,10 +22,35 @@ import Data.Char (toLower)
 import System.Random.Mersenne
 import Data.Word (Word)
 import Data.Time
+import Data.Maybe (fromMaybe)
+import Handler.EditPage (getFileNameId)
+import Handler.Comments (prettyDateTime)
+import Handler.Cart (getCartWidget)
 
 safeTail :: [a] -> [a]
 safeTail [] = []
 safeTail (_:xs) = xs
+
+data ArticleInfo = ArticleInfo
+    { aiTitle :: Text
+    , aiLink :: CmsRoute
+    , aiUser :: Text
+    , aiLabels :: Text
+    , aiTimestamp :: Text
+    }
+
+getArticleInfo :: Article -> YesodDB Cms Cms ArticleInfo
+getArticleInfo a = do
+    u <- get404 $ articleUser a
+    lids <- selectList [FileLabelFile ==. articleFile a] []
+    labels <- mapM get404 $ map (fileLabelLabel . snd) lids
+    return ArticleInfo
+        { aiTitle = articleTitle a
+        , aiLink = WikiR [articleName a]
+        , aiUser = fromMaybe (userHandle u) (userName u)
+        , aiLabels = T.intercalate "; " $ map labelName labels
+        , aiTimestamp = prettyDateTime $ articleAdded a
+        }
 
 addArticleForm :: Html -> Form Cms Cms (FormResult (Text, Text), Widget)
 addArticleForm = renderTable $ (,)
@@ -37,14 +62,16 @@ addArticleForm = renderTable $ (,)
 getRootR :: Handler RepHtml
 getRootR = do
     muid <- maybeAuthId
+    let mcart = fmap (getCartWidget False) muid
     labels <- runDB getLabels
     ((_, addArticleWidget), _) <- runFormPost addArticleForm
     let articleLink a = WikiR [articleName a]
-    articles <- fmap (map snd) $ runDB $ selectList [] [Desc ArticleAdded, LimitTo 5]
+    articles <- runDB $ selectList [] [Desc ArticleAdded, LimitTo 5] >>= mapM (getArticleInfo . snd)
     defaultLayout $(widgetFile "root")
 
 getAddArticleR :: Handler RepHtml
 getAddArticleR = do
+    uid <- requireAuthId
     ((res, widget), _) <- runFormPost addArticleForm
     case res of
         FormSuccess (title, content) -> do
@@ -58,9 +85,12 @@ getAddArticleR = do
                 , "\n"
                 , content
                 ]
+            fid <- runDB $ getFileNameId path
             now <- liftIO getCurrentTime
-            _ <- runDB $ insert $ Article title name now
-            redirect RedirectTemporary $ WikiR [name]
+            _ <- runDB $ insert $ Article title name now uid fid
+            setMessage "Your article has been added. You can now set labels on the article."
+            r <- getUrlRenderParams
+            redirectText RedirectTemporary $ r (EditPageR ["wiki", name, "index.html"]) [("labels", "yes")]
         _ -> defaultLayout $(widgetFile "add-article")
 
 postAddArticleR :: Handler RepHtml
