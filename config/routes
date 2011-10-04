@@ -5,6 +5,7 @@
 /robots.txt RobotsR GET
 
 / RootR GET
+/add-article AddArticleR GET POST
 
 /wiki/*Texts WikiR GET
 /page/#Text/*Texts PageR GET

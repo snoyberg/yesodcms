@@ -1,0 +1,41 @@
+article {
+    display: table;
+    border-spacing: 1em;
+}
+.column {
+    display: table-cell;
+    border: 1px solid #900;
+    margin-right: 5px;
+    height: 100%;
+    -webkit-transition: width 0.25s linear;
+    padding: 0.5em;
+    height: 2em;
+    width: 100px;
+    font-size: 0.7em;
+}
+.column > div {
+    display: none;
+}
+
+.column.active {
+    width: 550px;
+    font-size: 1em;
+}
+.column.active > div {
+    display: block;
+}
+
+.column h2 {
+    font-size: 1em;
+}
+
+.column:hover {
+    background-color: #fee;
+}
+.column.active:hover {
+    background-color: #fff;
+}
+
+.column.active #aloha-container {
+    width: 500px !important;
+}

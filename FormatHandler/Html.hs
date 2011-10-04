@@ -6,6 +6,7 @@ module FormatHandler.Html
     , YesodAloha (..)
     , splitTitle
     , titleForm
+    , alohaHtmlField
     ) where
 
 import FormatHandler

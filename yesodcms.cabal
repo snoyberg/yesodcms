@@ -126,6 +126,7 @@ executable         yesodcms
                  , pandoc
                  , http-enumerator
                  , xml-types
+                 , mersenne-random
 
     if !os(windows)
          build-depends: unix

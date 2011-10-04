@@ -1,0 +1,36 @@
+<article>
+    <section .column>
+        <h1>New Knowledge Community Posts
+        <div>
+            <ul>
+                $forall article <- articles
+                    <li>
+                        <a href=@{articleLink article}>#{articleTitle article}
+    <section .column .active>
+        <h1>Search Knowledge Community
+        <div>
+            <form method=get action=@{SearchR}>
+                <p>
+                    <input type=search placeholder=Search name=q>
+                <h2>Refine Search
+                $forall grouppair <- safeTail labels
+                    <fieldset>
+                        <legend>#{groupName $ snd $ fst grouppair}
+                        $forall label <- snd grouppair
+                            <div>
+                                <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label}>
+                                <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
+                <input type=submit value="Search">
+    <section .column>
+        <h1>Create Knowledge Article
+        <div>
+            $maybe _ <- muid
+                <form method=post action=@{AddArticleR}>
+                    <table>
+                        ^{addArticleWidget}
+                        <tr>
+                            <td colspan=3>
+                                <input type=submit value="Add article">
+            $nothing
+                <p>In order to add content, you need to login
+                ^{apLogin authBrowserId' AuthR}

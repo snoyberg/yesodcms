@@ -58,3 +58,7 @@ Cart
     file FileNameId
     priority Int
     UniqueCart user file
+Article
+    title Text
+    name Text
+    added UTCTime

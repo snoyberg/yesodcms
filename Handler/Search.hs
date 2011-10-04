@@ -2,6 +2,7 @@
 module Handler.Search
     ( getSearchR
     , getSearchXmlpipeR
+    , getLabels
     ) where
 
 import Foundation

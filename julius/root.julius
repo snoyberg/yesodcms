@@ -1,0 +1,6 @@
+$(function(){
+    $(".column").click(function(){
+        $(".column").not(this).removeClass("active").addClass("inactive");
+        $(this).removeClass("inactive").addClass("active");
+    });
+});

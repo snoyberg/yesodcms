@@ -224,6 +224,7 @@ fileTitle' fs fhs t = do
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
+    breadcrumb AddArticleR = return ("Add article", Nothing)
 
     breadcrumb (WikiR []) = return ("Wiki", Just RootR)
     breadcrumb (WikiR x) = do
