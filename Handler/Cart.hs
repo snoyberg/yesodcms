@@ -7,6 +7,7 @@ module Handler.Cart
     , postDownCartR
     , postDeleteCartR
     , getCartPrintR
+    , getCartPdfR
     ) where
 
 import Foundation
@@ -17,6 +18,12 @@ import Data.Monoid (mconcat)
 import FileStore
 import FormatHandler
 import Settings.StaticFiles
+import System.Random.Mersenne
+import System.Directory (createDirectoryIfMissing)
+import Data.Word (Word)
+import Text.Blaze.Renderer.Utf8 (renderHtml)
+import qualified Data.ByteString.Lazy as L
+import System.Cmd (rawSystem)
 
 getCartWidget :: Bool -> UserId -> Widget
 getCartWidget title uid = do
@@ -78,8 +85,8 @@ requireOwner cid = do
     unless (uid == cartUser c) $ permissionDenied "That's not your document"
     return uid
 
-getCartPrintR :: Handler RepHtml
-getCartPrintR = do
+getCartHtml :: Handler Html
+getCartHtml = do
     uid <- requireAuthId
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     widgets <- runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(_, c) -> do
@@ -104,11 +111,28 @@ getCartPrintR = do
 |]
         )
     pc <- widgetToPageContent $ mconcat widgets
-    hamletToRepHtml [hamlet|
+    r <- getUrlRenderParams
+    return $ [hamlet|
 !!!
 <html>
     <head>
         <title>MyDocs
     <body>
         ^{pageBody pc}
-|]
+|] r
+
+getCartPrintR :: Handler RepHtml
+getCartPrintR = fmap (RepHtml . toContent) getCartHtml
+
+getCartPdfR :: Handler ()
+getCartPdfR = do
+    html <- getCartHtml
+    liftIO $ createDirectoryIfMissing True "tmp"
+    num <- liftIO randomIO
+    let name = show $ (num :: Word) `mod` 1000000
+    let htmlFile = concat ["tmp/", name, ".html"]
+        pdfFile = concat ["tmp/", name, ".pdf"]
+    liftIO $ L.writeFile htmlFile $ renderHtml html
+    _ <- liftIO $ rawSystem "wkhtmltopdf" [htmlFile, pdfFile]
+    setHeader "Content-disposition" "attachment; filename=MyDocs.pdf"
+    sendFile "application/pdf" pdfFile

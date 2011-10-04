@@ -52,6 +52,7 @@
 /cart/#Text/add AddCartR POST
 /cart CartR GET
 /cart/print CartPrintR GET
+/cart/pdf CartPdfR GET
 /cart/#CartId/delete DeleteCartR POST
 /cart/#CartId/up UpCartR POST
 /cart/#CartId/down DownCartR POST

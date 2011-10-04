@@ -7,7 +7,7 @@ $else
         <a href=@{CartPrintR}>
             <img src=@{StaticR print_png} alt=Print>
         \ #
-        <a href="javascript:alert('Not yet functional')">
+        <a href=@{CartPdfR}>
             <img src=@{StaticR pdf_png} alt=PDF>
         \ #
         <a href="javascript:alert('Not yet functional')">

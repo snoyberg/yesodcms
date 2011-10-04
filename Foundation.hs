@@ -286,3 +286,4 @@ instance YesodBreadcrumbs Cms where
     breadcrumb DownCartR{} = return ("", Nothing)
     breadcrumb DeleteCartR{} = return ("", Nothing)
     breadcrumb CartPrintR{} = return ("", Nothing)
+    breadcrumb CartPdfR{} = return ("", Nothing)
