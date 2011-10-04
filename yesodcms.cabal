@@ -41,6 +41,7 @@ library
                      FormatHandler.Html
                      FormatHandler.DITA
                      FileStore
+                     Epub
                      Handler.Root
                      Handler.Wiki
                      Handler.EditPage
@@ -128,6 +129,7 @@ executable         yesodcms
                  , xml-types
                  , mersenne-random
                  , process
+                 , digest
 
     if !os(windows)
          build-depends: unix

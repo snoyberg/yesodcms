@@ -8,6 +8,7 @@ module Handler.Cart
     , postDeleteCartR
     , getCartPrintR
     , getCartPdfR
+    , getCartEpubR
     ) where
 
 import Foundation
@@ -24,6 +25,7 @@ import Data.Word (Word)
 import Text.Blaze.Renderer.Utf8 (renderHtml)
 import qualified Data.ByteString.Lazy as L
 import System.Cmd (rawSystem)
+import Epub (epub)
 
 getCartWidget :: Bool -> UserId -> Widget
 getCartWidget title uid = do
@@ -136,3 +138,9 @@ getCartPdfR = do
     _ <- liftIO $ rawSystem "wkhtmltopdf" [htmlFile, pdfFile]
     setHeader "Content-disposition" "attachment; filename=MyDocs.pdf"
     sendFile "application/pdf" pdfFile
+
+getCartEpubR :: Handler (ContentType, Content)
+getCartEpubR = do
+    html <- getCartHtml
+    setHeader "Content-disposition" "attachment; filename=MyDocs.epub"
+    return ("application/epub+zip", toContent $ epub html)

@@ -10,7 +10,7 @@ $else
         <a href=@{CartPdfR}>
             <img src=@{StaticR pdf_png} alt=PDF>
         \ #
-        <a href="javascript:alert('Not yet functional')">
+        <a href=@{CartEpubR}>
             <img src=@{StaticR epub_png} alt=ePub>
     <table>
         $forall cart <- carts
