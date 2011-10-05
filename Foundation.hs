@@ -189,14 +189,11 @@ instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage
 
 instance YesodAloha Cms where
-    urlAloha _ = Left $ StaticR aloha_aloha_js
-    urlAlohaPlugins _ = map (Left . StaticR)
-        [ aloha_plugins_com_gentics_aloha_plugins_Format_plugin_js
-        , aloha_plugins_com_gentics_aloha_plugins_Table_plugin_js
-        , aloha_plugins_com_gentics_aloha_plugins_List_plugin_js
-        , aloha_plugins_com_gentics_aloha_plugins_Link_plugin_js
-        , aloha_plugins_com_gentics_aloha_plugins_HighlightEditables_plugin_js
+    urlAloha _ = map (Left . StaticR)
+        [ ckeditor_ckeditor_js
+        , ckeditor_adapters_jquery_js
         ]
+    urlUpload _ = UploadR
 
 instance YesodJquery Cms where
     urlJqueryJs _ = Left $ StaticR jquery_js
@@ -288,3 +285,4 @@ instance YesodBreadcrumbs Cms where
     breadcrumb CartPrintR{} = return ("", Nothing)
     breadcrumb CartPdfR{} = return ("", Nothing)
     breadcrumb CartEpubR{} = return ("", Nothing)
+    breadcrumb UploadR{} = return ("", Nothing)

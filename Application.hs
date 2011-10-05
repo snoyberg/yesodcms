@@ -58,6 +58,7 @@ import Handler.Feed
 import Handler.Blog
 import Handler.Search
 import Handler.Cart
+import Handler.Upload
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see

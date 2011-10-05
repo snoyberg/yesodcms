@@ -57,3 +57,5 @@
 /cart/#CartId/delete DeleteCartR POST
 /cart/#CartId/up UpCartR POST
 /cart/#CartId/down DownCartR POST
+
+/upload UploadR POST

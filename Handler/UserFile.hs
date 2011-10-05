@@ -298,7 +298,7 @@ getRawR t = do
                 return $ maybe True (const False) x
     hamletToRepHtml [hamlet|
 <div>
-    <a .inner-link href=@{RedirectorR t}>Open
+    <a .inner-link href=@{RedirectorR t}>Open in book
     $if showAdd
         <form .addcart style=display:inline-block;margin-left:2em method=post action=@{AddCartR t}>
             <input type=submit value="Add to MyDocs">

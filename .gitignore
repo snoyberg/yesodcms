@@ -1,4 +1,5 @@
 config/client_session_key.aes
+client_session_key.aes
 /dist/
 *.swp
 /static/tmp/
@@ -6,3 +7,5 @@ config/client_session_key.aes
 *.hi
 *.o
 TODO
+/static/uploaded/
+/tmp/

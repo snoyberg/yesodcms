@@ -47,6 +47,7 @@ authGoogleEmail =
                     , ("openid.ns.ax.required", "email")
                     , ("openid.ax.mode", "fetch_request")
                     , ("openid.ax.required", "email")
+                    , ("openid.ui.icon", "true")
                     ]
                 attempt
                   (\err -> do

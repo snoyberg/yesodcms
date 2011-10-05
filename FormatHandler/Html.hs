@@ -97,8 +97,8 @@ $if not $ null youtubes
     hrefs' _ = Nothing
 
 class YesodAloha a where
-    urlAloha :: a -> Either (Route a) T.Text
-    urlAlohaPlugins :: a -> [Either (Route a) T.Text]
+    urlAloha :: a -> [Either (Route a) T.Text]
+    urlUpload :: a -> Route a
 
 alohaHtmlField :: (YesodAloha master, YesodJquery master) => Field sub master T.Text
 alohaHtmlField = Field
@@ -106,14 +106,18 @@ alohaHtmlField = Field
     , fieldView = \theId name val _isReq -> do
         y <- lift getYesod
         addScriptEither $ urlJqueryJs y
-        addScriptEither $ urlAloha y
-        mapM_ addScriptEither $ urlAlohaPlugins y
+        mapM_ addScriptEither $ urlAloha y
         toWidget [shamlet|
-<div ##{theId}-container>
-    <textarea ##{theId} name=#{name}>#{showVal val}
+<textarea ##{theId} name=#{name}>#{showVal val}
 |]
-        toWidget [julius|$(function(){$("##{theId}").aloha();})|]
-        toWidget [lucius|##{theId}-container { width: 800px; height: 400px; overflow: auto }|]
+        toWidget [julius|$(function(){$("##{theId}").ckeditor(
+    { width: 900
+    , height: 400
+    , filebrowserUploadUrl: "@{urlUpload y}"
+    });})|]
+        -- The next line is only for devices which do not support
+        -- CKeditor
+        toWidget [lucius|##{theId} { width: 500px; height: 300px; }|]
     }
   where
     showVal = either id id
