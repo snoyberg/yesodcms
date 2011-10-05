@@ -19,6 +19,42 @@ $(function(){
     });
     $(".refine").hide();
     $("input[type=checkbox]").change(function(){
-        $("#results-inner").load("@{SearchR}?raw=yes&" + $("#search").serialize());
+        $(this).filter(".buttonbox").siblings("input").attr("checked", false);
+        setupButtons();
+        loadForm();
     });
+
+    $("fieldset.top-filter > input").hide().addClass("buttonbox");
+    $("fieldset.top-filter > legend").after("<span id='all'>All</span>");
+    $("fieldset.top-filter > label, fieldset.top-filter > span").addClass("button");
+    $("#all").click(function(){
+        $("input.buttonbox").attr("checked", false);
+        setupButtons();
+        loadForm();
+    });
+    setupButtons();
 });
+
+function setupButtons() {
+    var count = 0;
+    $.each($(".buttonbox"), function(i, e){
+        var label = $("label[for=" + $(this).attr("id") + "]");
+        if ($(this).attr("checked")) {
+            label.addClass("active");
+            count++;
+        }
+        else {
+            label.removeClass("active");
+        }
+    });
+    if (count) {
+        $("#all").removeClass("active");
+    }
+    else {
+        $("#all").addClass("active");
+    }
+}
+
+function loadForm() {
+    $("#results-inner").load("@{SearchR}?raw=yes&" + $("#search").serialize());
+}
