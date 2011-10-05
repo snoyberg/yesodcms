@@ -22,7 +22,7 @@
                     \ #
                     <a href=@{AuthR LogoutR}>_{MsgLogout}
                 $nothing
-                    ^{apLogin authBrowserId' AuthR}
+                    ^{apLogin authGoogleEmail AuthR}
         <nav #breadcrumbs>
             $forall p <- (++) fixedParents parents'
                 $maybe url <- fst p

@@ -41,6 +41,7 @@ library
                      FormatHandler.Html
                      FormatHandler.DITA
                      FileStore
+                     GoogleEmail
                      Epub
                      Handler.Root
                      Handler.Wiki
@@ -130,6 +131,9 @@ executable         yesodcms
                  , mersenne-random
                  , process
                  , digest
+                 , attempt
+                 , control-monad-attempt
+                 , authenticate
 
     if !os(windows)
          build-depends: unix

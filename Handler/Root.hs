@@ -8,12 +8,12 @@ module Handler.Root
 import Foundation
 import Handler.Search (getLabels)
 import Yesod.Auth (apLogin)
-import Yesod.Auth.BrowserId (authBrowserId')
 import Data.Text (Text)
 import FormatHandler.Html (alohaHtmlField)
 import Control.Applicative
 import qualified Data.Text as T
 import FileStore
+import GoogleEmail
 import Data.Enumerator (enumList)
 import qualified Data.ByteString.Lazy as L
 import Data.Text.Lazy.Encoding (encodeUtf8)

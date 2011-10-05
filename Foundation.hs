@@ -26,7 +26,7 @@ import Yesod.Form.Jquery
 import Yesod.Static (Static, base64md5, StaticRoute(..))
 import Settings.StaticFiles
 import Yesod.Auth
-import Yesod.Auth.BrowserId (authBrowserId')
+import GoogleEmail (authGoogleEmail)
 import Yesod.Logger (Logger, logLazyText)
 import Yesod.Default.Config
 import qualified Settings
@@ -183,7 +183,7 @@ instance YesodAuth Cms where
             x <- getBy $ UniqueHandle h
             maybe (return h) (const $ getNextHandle $ i + 1) x
 
-    authPlugins = [authBrowserId']
+    authPlugins = [authGoogleEmail]
 
 instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage

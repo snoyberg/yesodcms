@@ -37,7 +37,7 @@
                                 <input type=submit value="Add article">
             $nothing
                 <p>In order to add content, you need to login
-                ^{apLogin authBrowserId' AuthR}
+                ^{apLogin authGoogleEmail AuthR}
     $maybe cart <- mcart
         <section .column>
             <h1>MyDocs
