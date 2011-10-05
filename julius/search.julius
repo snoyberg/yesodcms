@@ -1,5 +1,5 @@
 $(function(){
-    $("a[data-raw]").click(function(){
+    $("a[data-raw]").live("click", function(){
         var $this = $(this);
         var $gramps = $this.parent().parent();
         var $ajax = $gramps.children("div.ajax");
@@ -16,5 +16,9 @@ $(function(){
             $form.before("<span class='cart-added'>Added to MyDocs</span>").detach();
         });
         return false;
+    });
+    $(".refine").hide();
+    $("input[type=checkbox]").change(function(){
+        $("#results-inner").load("@{SearchR}?raw=yes&" + $("#search").serialize());
     });
 });

@@ -29,7 +29,7 @@
         <h1>Create Knowledge Article
         <div>
             $maybe _ <- muid
-                <form method=post action=@{AddArticleR}>
+                <form method=post action=@{AddArticleR} #add-article>
                     <table>
                         ^{addArticleWidget}
                         <tr>

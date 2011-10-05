@@ -5,7 +5,7 @@ module Handler.Search
     , getLabels
     ) where
 
-import Foundation
+import Foundation hiding (hamletFile)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Text.Search.Sphinx
 import qualified Text.Search.Sphinx.Types as S
@@ -30,6 +30,7 @@ import Database.Persist.GenericSql (SqlPersist, runSqlPool)
 import Handler.Profile (getLabels)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Text.Hamlet (hamletFile)
 
 data MInfo = MInfo
     { miFile :: T.Text
@@ -82,37 +83,20 @@ getSearchR = do
     let checkedLabels = mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
     let isChecked = flip elem checkedLabels
     groupedCheckedLabels <- runDB $ groupLabels checkedLabels
-    labels <- runDB getLabels
-    let results =
+    resultsInner <-
             case mres of
-                Nothing -> return ()
+                Nothing -> return [hamlet||]
                 Just (S.Ok qr) -> do
-                    mis <- lift $ runDB $ fmap catMaybes $ forM (S.matches qr) $ \S.Match { S.documentId = did } -> do
-                        let fid = Key $ PersistInt64 did
-                        mf <- verifyFile groupedCheckedLabels fid
-                        case mf of
-                            Just FileName
-                                { fileNameTitle = Just title
-                                , fileNameContent = Just content
-                                , fileNameUri = uri
-                                } -> do
-                                    let escape '<' = "&lt;"
-                                        escape '>' = "&gt;"
-                                        escape '&' = "&amp;"
-                                        escape c = T.singleton c
-                                    rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack $ fromMaybe "" mquery
-                                    case rexcerpt of
-                                        S.Ok bss ->
-                                            return $ Just MInfo
-                                                { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
-                                                , miTitle = title
-                                                , miExcerpt = TL.concat $ map (decodeUtf8With ignore) bss
-                                                }
-                                        _ -> return Nothing
-                            _ -> return Nothing
-                    $(widgetFile "search-results")
-                Just x -> [whamlet|<p>Error running search: #{show x}|]
-    defaultLayout $(widgetFile "search")
+                    mis <- getMInfos qr groupedCheckedLabels mquery
+                    return $(hamletFile "hamlet/search-results-inner.hamlet")
+                Just x -> return [hamlet|<p>Error running search: #{show x}|]
+    isRaw <- runInputGet $ iopt boolField "raw"
+    case isRaw of
+        Just True -> hamletToRepHtml (resultsInner :: HtmlUrl CmsRoute)
+        _ -> do
+            labels <- runDB getLabels
+            let results = $(widgetFile "search-results")
+            defaultLayout $(widgetFile "search")
   where
     config = defaultConfig
         { port = 9312
@@ -180,3 +164,28 @@ getSearchXmlpipeR = do
                                 title <- fileTitle' fs fhs t
                                 update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
                                 return [(fid, T.concat [title, " ", text])]
+
+getMInfos :: S.QueryResult -> Map.Map GroupId (Set.Set LabelId) -> Maybe T.Text -> Handler [MInfo]
+getMInfos qr groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM (S.matches qr) $ \S.Match { S.documentId = did } -> do
+    let fid = Key $ PersistInt64 did
+    mf <- verifyFile groupedCheckedLabels fid
+    case mf of
+        Just FileName
+            { fileNameTitle = Just title
+            , fileNameContent = Just content
+            , fileNameUri = uri
+            } -> do
+                let escape '<' = "&lt;"
+                    escape '>' = "&gt;"
+                    escape '&' = "&amp;"
+                    escape c = T.singleton c
+                rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack $ fromMaybe "" mquery
+                case rexcerpt of
+                    S.Ok bss ->
+                        return $ Just MInfo
+                            { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
+                            , miTitle = title
+                            , miExcerpt = TL.concat $ map (decodeUtf8With ignore) bss
+                            }
+                    _ -> return Nothing
+        _ -> return Nothing

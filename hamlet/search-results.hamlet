@@ -6,11 +6,6 @@
             $forall label <- snd grouppair
                 <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
                 <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
-            <input type=submit value="Refine Search">
-    $forall mi <- mis
-        <div .result>
-            <div .link>
-                <a href=@{RedirectorR $ miFile mi} data-raw=@{RawR $ miFile mi}>
-                    #{miTitle mi}
-            <div .excerpt>
-                \#{preEscapedLazyText $ miExcerpt mi}
+            <input .refine type=submit value="Refine Search">
+    <div #results-inner>
+        ^{toWidget resultsInner}

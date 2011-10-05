@@ -14,13 +14,11 @@ article {
     font-size: 0.7em;
 }
 .column > div {
-    display: none;
+    opacity: 0.2;
 }
 
-.column > h1 {
-    -webkit-transform: rotate(90deg);
-    -webkit-transform-origin-y: 2em;
-    -webkit-transition: -webkit-transform 0.25s linear;
+#add-article {
+    display: none;
 }
 
 .author {
@@ -32,11 +30,11 @@ article {
     width: 550px;
     font-size: 1em;
 }
-.column.active > div {
+.active #add-article {
     display: block;
 }
-.column.active > h1 {
-    -webkit-transform: none;
+.column.active > div {
+    opacity: 1;
 }
 
 .column h2 {
