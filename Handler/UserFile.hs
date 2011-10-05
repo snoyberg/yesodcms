@@ -297,7 +297,8 @@ getRawR t = do
                 x <- getBy $ UniqueCart uid fid
                 return $ maybe True (const False) x
     hamletToRepHtml [hamlet|
-<div>
+<div .raw>
+    <a href="#" .close>X
     <a .inner-link href=@{RedirectorR t}>Open in book
     $if showAdd
         <form .addcart style=display:inline-block;margin-left:2em method=post action=@{AddCartR t}>

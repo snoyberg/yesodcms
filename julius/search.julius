@@ -10,6 +10,9 @@ $(function(){
         }
         return false;
     });
+    $("a.close").live("click", function(){
+        $(this).parent().parent().toggleClass("hidden");
+    });
     $("form.addcart > input[type=submit]").live("click", function(data){
         var $form = $(this).parent();
         $.post($form.attr("action"), function(){
