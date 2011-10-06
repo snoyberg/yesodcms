@@ -4,6 +4,15 @@
                 <a href=@{RootR}>
                     <span>Homepage
             <ul>
+                <li>
+                    $maybe u <- mu
+                        _{MsgLoggedInAs $ userEmail $ snd u}
+                        \ #
+                        <a href=@{ProfileR}>Profile
+                        \ #
+                        <a href=@{AuthR LogoutR}>_{MsgLogout}
+                    $nothing
+                        ^{apLogin authGoogleEmail AuthR}
                 $maybe _ <- mu
                     <li>
                         <a href=@{CartR}>MyDocs
@@ -12,17 +21,13 @@
                 <li>
                     <a href=@{WikiR $ return "Videos"}>Videos
                 <li>
+                    <a href="http://feeds.feedburner.com/emersonsocialkb" title="Subscribe to my feed" rel="alternate" type="application/rss+xml">
+                        <img src=@{StaticR feed_png} style="border:0;height:16px">
+                    <a href="http://feeds.feedburner.com/emersonsocialkb" title="Subscribe to my feed" rel="alternate" type="application/rss+xml">
+                        Subscribe in a reader
+                <li>
                     <form style=display:inline action=@{SearchR}>
                         <input type=search name=q placeholder=Search>
-            <div #login>
-                $maybe u <- mu
-                    _{MsgLoggedInAs $ userEmail $ snd u}
-                    \ #
-                    <a href=@{ProfileR}>Profile
-                    \ #
-                    <a href=@{AuthR LogoutR}>_{MsgLogout}
-                $nothing
-                    ^{apLogin authGoogleEmail AuthR}
         <nav #breadcrumbs>
             $forall p <- (++) fixedParents parents'
                 $maybe url <- fst p
