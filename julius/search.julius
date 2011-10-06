@@ -15,8 +15,9 @@ $(function(){
     });
     $("input.addcart").live("click", function(data){
         var $this = $(this);
-        $.post($this.attr("data-action"), function(){
+        $.post($this.attr("data-action") + "?raw=yes", function(res){
             $this.before("<span class='cart-added'>Added to MyDocs</span>").detach();
+            $(".cart").before(res).detach();
         });
         return false;
     });

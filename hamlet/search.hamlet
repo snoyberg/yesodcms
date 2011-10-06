@@ -15,3 +15,7 @@
                             <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
             <input .refine type=submit value="Refine Search">
     ^{results}
+    $maybe cartTable <- mcartTable
+        <article .mydocs>
+            <h2>MyDocs
+            ^{cartTable}

@@ -1,0 +1,12 @@
+$(function(){
+    $(".cart input").live("click", function(){
+        var $this = $(this);
+        $.post($this.parent().attr("action") + "?raw=yes", function(res){
+            $(".cart").before(res).detach();
+            if($this.hasClass("delete")) {
+                $(".ajax").detach();
+            }
+        });
+        return false;
+    });
+});

@@ -1,9 +1,13 @@
 @media (min-width: 600px) {
-    .leftbar, .search-results {
+    .leftbar, .search-results, .mydocs {
         display: table-cell;
     }
     .leftbar {
         width: 250px;
+    }
+    .mydocs {
+        width: 200px;
+        zoom: 0.8;
     }
 }
 input[type=submit] {

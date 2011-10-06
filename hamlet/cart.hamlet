@@ -12,17 +12,4 @@ $else
         \ #
         <a href=@{CartEpubR}>
             <img src=@{StaticR epub_png} alt=ePub>
-    <table>
-        $forall cart <- carts
-            <tr>
-                <td>
-                    <a href=@{fst $ snd cart}>#{snd $ snd cart}
-                <td>
-                    <form method=post action=@{DeleteCartR $ fst cart}>
-                        <input type=submit value=Delete>
-                <td>
-                    <form method=post action=@{UpCartR $ fst cart}>
-                        <input type=submit value=Up>
-                <td>
-                    <form method=post action=@{DownCartR $ fst cart}>
-                        <input type=submit value=Down>
+    ^{cartTable}

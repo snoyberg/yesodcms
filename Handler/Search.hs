@@ -31,6 +31,8 @@ import Handler.Profile (getLabels)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Text.Hamlet (hamletFile)
+import Handler.Cart (getCarts)
+import Settings.StaticFiles
 
 data MInfo = MInfo
     { miFile :: T.Text
@@ -96,6 +98,17 @@ getSearchR = do
         _ -> do
             labels <- runDB getLabels
             let results = $(widgetFile "search-results")
+            mcartTable <- do
+                muid <- maybeAuthId
+                case muid of
+                    Nothing -> return Nothing
+                    Just uid -> do
+                        carts <- getCarts uid
+                        let mmsg = Nothing :: Maybe String
+                        return $ Just $ do
+                            toWidget $(luciusFile "cart")
+                            toWidget $(juliusFile "cart")
+                            $(widgetFile "cart-table")
             defaultLayout $(widgetFile "search")
   where
     config = defaultConfig

@@ -28,4 +28,7 @@ staticFilesList "static"
     , "ckeditor/ckeditor.js"
     , "ckeditor/adapters/jquery.js"
     , "feed.png"
+    , "up.png"
+    , "down.png"
+    , "delete.png"
     ]

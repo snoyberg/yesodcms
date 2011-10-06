@@ -1,0 +1,18 @@
+<table .cart>
+    $maybe msg <- mmsg
+        <tr>
+            <td colspan=4>
+                #{msg}
+    $forall cart <- carts
+        <tr>
+            <td>
+                <a href=@{fst $ snd cart}>#{snd $ snd cart}
+            <td>
+                <form method=post action=@{UpCartR $ fst cart}>
+                    <input type=image value=Up src=@{StaticR up_png}>
+            <td>
+                <form method=post action=@{DownCartR $ fst cart}>
+                    <input type=image value=Down src=@{StaticR down_png}>
+            <td>
+                <form method=post action=@{DeleteCartR $ fst cart}>
+                    <input .delete type=image value=Delete src=@{StaticR delete_png}>

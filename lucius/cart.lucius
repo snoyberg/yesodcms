@@ -1,0 +1,6 @@
+table.cart td {
+    border: 0;
+}
+table.cart tr {
+    border: 1px solid #666;
+}

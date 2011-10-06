@@ -9,9 +9,11 @@ module Handler.Cart
     , getCartPrintR
     , getCartPdfR
     , getCartEpubR
+    , getCarts
     ) where
 
-import Foundation
+import Foundation hiding (hamletFile)
+import Text.Hamlet (hamletFile)
 import qualified Data.Text as T
 import Handler.EditPage (getFileNameId)
 import Control.Monad (unless)
@@ -27,10 +29,10 @@ import qualified Data.ByteString.Lazy as L
 import System.Cmd (rawSystem)
 import Epub (epub)
 
-getCartWidget :: Bool -> UserId -> Widget
-getCartWidget title uid = do
-    Cms { formatHandlers = fhs, fileStore = fs } <- lift getYesod
-    carts <- lift $ runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(cid, c) -> do
+getCarts :: UserId -> Handler [(CartId, (CmsRoute, T.Text))]
+getCarts uid = do
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    runDB $ selectList [CartUser ==. uid] [Asc CartPriority] >>= mapM (\(cid, c) -> do
         file <- get404 $ cartFile c
         let t = T.drop 3 $ fileNameUri file
         title' <-
@@ -39,12 +41,18 @@ getCartWidget title uid = do
                 Nothing -> fileTitle' fs fhs t
         return (cid, (RedirectorR t, title'))
         )
+
+getCartWidget :: Bool -> UserId -> Widget
+getCartWidget title uid = do
+    carts <- lift $ getCarts uid
+    let mmsg = Nothing :: Maybe String
+    let cartTable = $(widgetFile "cart-table")
     $(widgetFile "cart")
 
 getCartR :: Handler RepHtml
 getCartR = requireAuthId >>= defaultLayout . getCartWidget True
 
-postAddCartR :: T.Text -> Handler ()
+postAddCartR :: T.Text -> Handler RepHtml
 postAddCartR t = do
     uid <- requireAuthId
     msg <- runDB $ do
@@ -55,30 +63,38 @@ postAddCartR t = do
             Right{} -> do
                 fixCarts uid
                 return "MyDocs updated!"
-    setMessage msg
-    redirect RedirectTemporary CartR
+    changeCartResponse uid msg
 
 fixCarts :: UserId -> YesodDB Cms Cms ()
 fixCarts uid = do
     keys <- fmap (map fst) $ selectList [CartUser ==. uid] [Asc CartPriority]
     mapM_ (\(key, priority) -> update key [CartPriority =. priority]) $ zip keys [10, 20..]
 
-postUpCartR, postDownCartR, postDeleteCartR :: CartId -> Handler ()
+changeCartResponse :: UserId -> Html -> Handler RepHtml
+changeCartResponse uid msg = do
+    x <- runInputGet $ iopt boolField "raw"
+    case x of
+        Just True -> return ()
+        _ -> do
+            setMessage msg
+            redirect RedirectTemporary CartR
+    carts <- getCarts uid
+    let mmsg = Just msg
+    hamletToRepHtml $(hamletFile "hamlet/cart-table.hamlet")
+
+postUpCartR, postDownCartR, postDeleteCartR :: CartId -> Handler RepHtml
 postUpCartR cid = do
     uid <- requireOwner cid
     runDB $ update cid [CartPriority -=. 15] >> fixCarts uid
-    setMessage "Document moved up"
-    redirect RedirectTemporary CartR
+    changeCartResponse uid "Document moved up"
 postDownCartR cid = do
     uid <- requireOwner cid
     runDB $ update cid [CartPriority +=. 15] >> fixCarts uid
-    setMessage "Document moved down"
-    redirect RedirectTemporary CartR
+    changeCartResponse uid "Document moved down"
 postDeleteCartR cid = do
     uid <- requireOwner cid
     runDB $ delete cid >> fixCarts uid
-    setMessage "Document deleted"
-    redirect RedirectTemporary CartR
+    changeCartResponse uid "Document deleted"
 
 requireOwner :: CartId -> Handler UserId
 requireOwner cid = do
