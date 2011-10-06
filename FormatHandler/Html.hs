@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module FormatHandler.Html
     ( htmlFormatHandler
     , YesodAloha (..)
@@ -10,7 +11,7 @@ module FormatHandler.Html
     ) where
 
 import FormatHandler
-import Text.Julius (julius)
+import Settings (juliusFile)
 import Text.HTML.SanitizeXSS (sanitizeBalance)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -110,11 +111,7 @@ alohaHtmlField = Field
         toWidget [shamlet|
 <textarea ##{theId} name=#{name}>#{showVal val}
 |]
-        toWidget [julius|$(function(){$("##{theId}").ckeditor(
-    { width: 900
-    , height: 400
-    , filebrowserUploadUrl: "@{urlUpload y}"
-    });})|]
+        toWidget $(juliusFile "ckeditor")
         -- The next line is only for devices which do not support
         -- CKeditor
         toWidget [lucius|##{theId} { width: 500px; height: 300px; }|]
