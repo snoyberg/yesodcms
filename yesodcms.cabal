@@ -40,6 +40,7 @@ library
                      FormatHandler.Markdown
                      FormatHandler.Html
                      FormatHandler.DITA
+                     FormatHandler.Video
                      FileStore
                      GoogleEmail
                      Epub

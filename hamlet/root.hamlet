@@ -31,10 +31,18 @@
             $maybe _ <- muid
                 <form method=post action=@{AddArticleR} #add-article>
                     <table>
+                        <caption>Add Article
                         ^{addArticleWidget}
                         <tr>
                             <td colspan=3>
                                 <input type=submit value="Add article">
+                <form method=post action=@{AddVideoR} #add-video>
+                    <table>
+                        <caption>Add Video
+                        ^{addVideoWidget}
+                        <tr>
+                            <td colspan=3>
+                                <input type=submit value="Add video">
             $nothing
                 <p>In order to add content, you need to login
                 ^{apLogin authGoogleEmail AuthR}

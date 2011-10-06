@@ -3,6 +3,8 @@ module Handler.Root
     ( getRootR
     , getAddArticleR
     , postAddArticleR
+    , getAddVideoR
+    , postAddVideoR
     ) where
 
 import Foundation
@@ -26,6 +28,8 @@ import Data.Maybe (fromMaybe)
 import Handler.EditPage (getFileNameId)
 import Handler.Comments (prettyDateTime)
 import Handler.Cart (getCartWidget)
+import FormatHandler.Video
+import qualified Data.Text.Encoding as TE
 
 safeTail :: [a] -> [a]
 safeTail [] = []
@@ -65,6 +69,7 @@ getRootR = do
     let mcart = fmap (getCartWidget False) muid
     labels <- runDB getLabels
     ((_, addArticleWidget), _) <- runFormPost addArticleForm
+    ((_, addVideoWidget), _) <- runFormPost $ videoForm Nothing
     let articleLink a = WikiR [articleName a]
     articles <- runDB $ selectList [] [Desc ArticleAdded, LimitTo 5] >>= mapM (getArticleInfo . snd)
     defaultLayout $(widgetFile "root")
@@ -88,6 +93,7 @@ getAddArticleR = do
             fid <- runDB $ getFileNameId path
             now <- liftIO getCurrentTime
             _ <- runDB $ insert $ Article title name now uid fid
+            addLabel fid "How to Article"
             setMessage "Your article has been added. You can now set labels on the article."
             r <- getUrlRenderParams
             redirectText RedirectTemporary $ r (EditPageR ["wiki", name, "index.html"]) [("labels", "yes")]
@@ -108,3 +114,32 @@ toSlug =
     go ' ' = "-"
     go '_' = "-"
     go _ = ""
+
+getAddVideoR :: Handler RepHtml
+getAddVideoR = do
+    uid <- requireAuthId
+    ((res, widget), _) <- runFormPost $ videoForm Nothing
+    case res of
+        FormSuccess text -> do
+            num <- liftIO randomIO
+            Just (Video title _ _) <- return $ parseVideo text
+            let name = T.pack (show $ (num :: Word) `mod` 10000) `T.append` "-" `T.append` toSlug title
+            let path = T.concat ["wiki/", name, "/index.video"]
+            fs <- fmap fileStore getYesod
+            liftIO $ fsPutFile fs path $ enumList 1 [TE.encodeUtf8 text]
+            fid <- runDB $ getFileNameId path
+            now <- liftIO getCurrentTime
+            _ <- runDB $ insert $ Article title name now uid fid
+            addLabel fid "Video"
+            setMessage "Your video has been added. You can now set labels on the video."
+            r <- getUrlRenderParams
+            redirectText RedirectTemporary $ r (EditPageR ["wiki", name, "index.video"]) [("labels", "yes")]
+        _ -> defaultLayout $(widgetFile "add-video")
+
+postAddVideoR :: Handler RepHtml
+postAddVideoR = getAddVideoR
+
+addLabel :: FileNameId -> T.Text -> Handler ()
+addLabel fid name = runDB $ do
+    lids <- fmap (map fst) $ selectList [LabelName ==. name] []
+    mapM_ (insert . FileLabel fid) lids

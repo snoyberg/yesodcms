@@ -4,4 +4,29 @@ $(function(){
         $(this).removeClass("inactive").addClass("active");
         $("article").removeClass("init");
     });
+
+    var html = []
+    html.push("<input type='radio' name='article-type' id='radio-article' checked>");
+    html.push("<label for='radio-article'>Article</label>");
+    html.push("<input type='radio' name='article-type' id='radio-video'>");
+    html.push("<label for='radio-video'>Video</label>");
+    $("#add-article").before(html.join(" "));
+
+    var toArticle = function() {
+        $("#add-video").hide();
+        $("#add-article").show();
+    };
+    var toVideo = function() {
+        $("#add-video").show();
+        $("#add-article").hide();
+    };
+    $("input[name=article-type]").click(function(){
+        if ($(this).attr("id") == "radio-article") {
+            toArticle();
+        }
+        else {
+            toVideo();
+        }
+    });
+    toArticle();
 });
