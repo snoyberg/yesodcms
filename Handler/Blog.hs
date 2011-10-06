@@ -7,7 +7,6 @@ module Handler.Blog
     ) where
 
 import Foundation
-import Yesod.Goodies.Gravatar
 import Handler.Comments (prettyDateTime)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -44,11 +43,6 @@ getBlogPostR y m s = do
     let blogArchive = $(widgetFile "blog-archive")
     let widget = blogWidget b
     defaultLayout $(widgetFile "blog")
-  where
-    opts = defaultOptions
-        { gDefault = Just Identicon
-        , gSize = Just $ Size 100
-        }
 
 toTuples :: Blog -> (Int, (Month, Entry))
 toTuples b = (blogYear b, (blogMonth b, Entry

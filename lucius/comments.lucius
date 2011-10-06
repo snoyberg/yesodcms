@@ -37,7 +37,7 @@ div.comments textarea {
 
 div.paragraph-link {
     position: relative;
-
+    display: none;
 }
 
 div.paragraph-link a, div.paragraph-link a:visited {

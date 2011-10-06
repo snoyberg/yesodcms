@@ -1,4 +1,4 @@
-<article>
+<article .init>
     <section .column>
         <h1>New Knowledge Community Posts
         <div>
@@ -38,6 +38,7 @@
             $nothing
                 <p>In order to add content, you need to login
                 ^{apLogin authGoogleEmail AuthR}
+        <p .oninactive>Click here to create a knowledge article.
     $maybe cart <- mcart
         <section .column>
             <h1>MyDocs

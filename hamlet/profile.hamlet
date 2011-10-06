@@ -16,7 +16,7 @@
     <b>#{userEmail u}
     . Your current avatar is:
 <p>
-    <img alt=Avatar src=#{gravatarImg (userEmail u) opts}
+    <img alt=Avatar src=#{userGravatar 160 u}
 $maybe groups <- mgroups
     <h2>Label groups
     <table>

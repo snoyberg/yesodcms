@@ -16,7 +16,6 @@ import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Data.Text.Lazy (toStrict)
 import System.Locale
-import Yesod.Goodies.Gravatar
 import Handler.Feed (addFeedItemText)
 import Data.Maybe (fromMaybe)
 
@@ -34,10 +33,7 @@ getCommentsR = do
         a <- get404 $ commentAuthor c
         return $ Object $ Map.fromList
             [ ("name", String $ toStrict $ renderHtml $ userDisplayName a)
-            , ("gravatar", String $ pack $ gravatarImg (userEmail a) defaultOptions
-                { gSize = Just $ Size 40
-                , gDefault = Just Identicon
-                })
+            , ("gravatar", String $ pack $ userGravatar 40 a)
             , ("date", String $ prettyDateTime $ commentTime c)
             , ("content", String $ toStrict $ renderHtml $ toHtml $ commentContent c)
             ]

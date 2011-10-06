@@ -6,6 +6,7 @@ import Data.Text (Text, pack)
 import FileStore (FileStorePath)
 import Data.Time (UTCTime)
 import Text.Hamlet (shamlet)
+import qualified Yesod.Goodies.Gravatar as G
 
 newtype BlogSlugT = BlogSlugT Text
     deriving (Read, Eq, Show, PersistField, SinglePiece, Ord)
@@ -31,3 +32,9 @@ $maybe n <- userName u
 $nothing
     \#{userHandle u}
 |]
+
+userGravatar :: Int -> User -> String
+userGravatar size u = G.gravatarImg (userEmail u) G.defaultOptions
+    { G.gSize = Just $ G.Size size
+    , G.gDefault = Just G.MM
+    }

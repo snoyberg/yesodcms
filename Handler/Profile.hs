@@ -17,7 +17,6 @@ module Handler.Profile
 import Foundation
 import Control.Applicative ((<$>), (<*>), pure)
 import qualified Data.Text as T
-import Yesod.Goodies.Gravatar
 import Data.Monoid (mempty)
 import Control.Monad (unless)
 import Database.Persist.Join hiding (runJoin)
@@ -67,11 +66,6 @@ getProfileR = do
             setMessage "Profile updated"
             redirect RedirectTemporary ProfileR
         _ -> defaultLayout $(widgetFile "profile")
-  where
-    opts = defaultOptions
-        { gDefault = Just Identicon
-        , gSize = Just $ Size 160
-        }
 
 postProfileR :: Handler RepHtml
 postProfileR = getProfileR

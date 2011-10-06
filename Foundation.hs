@@ -223,7 +223,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
     breadcrumb AddArticleR = return ("Add article", Nothing)
 
-    breadcrumb (WikiR []) = return ("Wiki", Just RootR)
+    breadcrumb (WikiR []) = return ("KB", Just RootR)
     breadcrumb (WikiR x) = do
         let parent = init x
             this = last x

@@ -31,7 +31,6 @@ import Codec.Archive.Zip
 import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
-import Yesod.Goodies.Gravatar
 import Data.Time
 import Network.HTTP.Enumerator
 import Data.IORef (writeIORef)
@@ -41,11 +40,6 @@ getUsersR :: Handler RepHtml
 getUsersR = do
     users <- runDB $ fmap (map snd) $ selectList [] [Asc UserHandle]
     defaultLayout $(widgetFile "users")
-  where
-    opts = defaultOptions
-        { gSize = Just $ Size 80
-        , gDefault = Just Identicon
-        }
 
 getUserFileIntR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileIntR uid' ts = do
@@ -299,7 +293,7 @@ getRawR t = do
     hamletToRepHtml [hamlet|
 <div .raw>
     <a href="#" .close>X
-    <a .inner-link href=@{RedirectorR t}>Open in book
+    <a .inner-link href=@{RedirectorR t}>Open Topic
     $if showAdd
         <form .addcart style=display:inline-block;margin-left:2em method=post action=@{AddCartR t}>
             <input type=submit value="Add to MyDocs">

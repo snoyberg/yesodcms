@@ -2,6 +2,9 @@
     .leftbar, .search-results {
         display: table-cell;
     }
+    .leftbar {
+        width: 250px;
+    }
 }
 input[type=submit] {
     display: block;

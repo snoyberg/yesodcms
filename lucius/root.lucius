@@ -11,14 +11,18 @@ article {
     padding: 0.5em;
     height: 2em;
     width: 100px;
-    font-size: 0.7em;
+    zoom: 0.7;
 }
-.column > div {
+.column > div, .column > p {
     opacity: 0.2;
+}
+.init .column > div, .init .column > p {
+    opacity: 1;
 }
 
 #add-article {
-    display: none;
+    zoom: 0.2;
+    overflow: hidden;
 }
 
 .author {
@@ -28,10 +32,11 @@ article {
 
 .column.active {
     width: 550px;
-    font-size: 1em;
+    zoom: 1;
 }
 .active #add-article {
-    display: block;
+    zoom: 1;
+    overflow: initial;
 }
 .column.active > div {
     opacity: 1;
@@ -50,4 +55,8 @@ article {
 
 .column.active #aloha-container {
     width: 500px !important;
+}
+
+.active .oninactive {
+    display: none;
 }

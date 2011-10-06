@@ -4,7 +4,7 @@
     <h1>#{title}
     <h2 .date>#{prettyDateTime $ blogPosted b}
     <p .author>
-        <img alt=Avatar src=#{gravatarImg (userEmail u) opts}
+        <img alt=Avatar src=#{userGravatar 100 u}
         $maybe n <- userName u
             \ #{n}
     ^{widget}
