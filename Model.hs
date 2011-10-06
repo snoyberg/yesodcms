@@ -10,6 +10,7 @@ import Text.Hamlet (shamlet)
 import qualified Yesod.Goodies.Gravatar as G
 import qualified Data.Text as T
 import Data.Maybe (fromMaybe)
+import Network.URI.Enumerator
 
 newtype BlogSlugT = BlogSlugT Text
     deriving (Read, Eq, Show, PersistField, SinglePiece, Ord)
@@ -45,3 +46,6 @@ userGravatar size u = G.gravatarImg (userEmail u) G.defaultOptions
 getFileNameId :: (PersistBackend b m, Functor (b m)) => Text -> b m (Key b (FileNameGeneric backend))
 getFileNameId t =
     fmap (either fst id) $ insertBy $ FileName (T.append "fs:" $ fromMaybe t $ T.stripPrefix "fs:" t) Nothing Nothing
+
+getFileNameIdURI :: (PersistBackend b m, Functor (b m)) => URI -> b m (Key b (FileNameGeneric backend))
+getFileNameIdURI = getFileNameId . uriPath

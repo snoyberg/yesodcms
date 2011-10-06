@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RankNTypes #-}
 module FormatHandler.DITA
     ( ditaFormatHandler
     , ditamapFormatHandler
@@ -51,8 +52,9 @@ ditaFormatHandler :: (Href -> T.Text)
                   -> DTDCache
                   -> ClassMap
                   -> (URI -> IO D.FileId)
+                  -> (forall sub. URI -> GWidget sub master ())
                   -> FormatHandler master
-ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
+ditaFormatHandler renderHref' cache classmap loadFileId addCartWidget = FormatHandler
     { fhExts = Set.fromList ["xml", "dita"]
     , fhName = "DITA Topic"
     , fhForm = xmlForm "Content"
@@ -118,6 +120,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
             Left e -> toWidget [shamlet|<p>Invalid DITA content: #{show e}|]
             Right (title, nodes) -> do
                 unless (T.null title) $ setTitle $ toHtml title
+                addCartWidget uri
                 toWidget $ mapM_ toHtml nodes
 
 ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
@@ -128,8 +131,9 @@ ditamapFormatHandler :: (RenderMessage master FormMessage, Show (Route master))
                      -> IORef (Map.Map URI Doc)
                      -> (URI -> Route master)
                      -> (URI -> NavId -> D.FileId -> D.TopicId -> (Route master, [(T.Text, T.Text)]))
+                     -> (forall sub. URI -> GWidget sub master ())
                      -> FormatHandler master
-ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute toNavRoute = FormatHandler
+ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute toNavRoute addCartWidget = FormatHandler
     { fhExts = Set.fromList ["ditamap"]
     , fhName = "DITA Map"
     , fhForm = xmlForm "Content"
@@ -161,11 +165,12 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
             doc <- cacheLoad uri
 
             return $ case mnavid >>= flip Map.lookup (docNavMap doc) . NavId of
-                Nothing -> (docTitle doc, wrapper False Nothing (showNavs Nothing root (docNavs doc)) [])
-                Just nav -> (navTitle nav, wrapper True (Just nav) (showNavs (Just nav) root (docNavs doc)) (showNav makeRi nav))
+                Nothing -> (docTitle doc, wrapper False Nothing (showNavs Nothing root (docNavs doc)) [], Nothing)
+                Just nav -> (navTitle nav, wrapper True (Just nav) (showNavs (Just nav) root (docNavs doc)) (showNav makeRi nav), Just nav)
         case ex of
             Left e -> toWidget [shamlet|<p>Invalid DITA map: #{show e}|]
-            Right (title, nodes) -> do
+            Right (title, nodes, mnav) -> do
+                maybe (return ()) addCartWidget $ mnav >>= navName
                 unless (T.null title) $ setTitle $ toHtml title
                 toWidget $ mapM_ toHtml nodes
     , fhFilter = xmlFilter

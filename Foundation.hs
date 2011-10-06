@@ -19,6 +19,7 @@ module Foundation
     , fileTitle
     , fileTitle'
     , defaultLayoutExtraParents
+    , addToCartURI
     ) where
 
 import Yesod
@@ -48,6 +49,7 @@ import Yesod.AtomFeed
 import Data.Maybe (fromMaybe)
 import Control.Monad.IO.Class (MonadIO)
 import Data.IORef (IORef)
+import Network.URI.Enumerator
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -218,6 +220,18 @@ fileTitle' fs fhs t = do
     safeInit s
         | T.null s = s
         | otherwise = T.init s
+
+addToCartURI :: URI -> GWidget sub Cms ()
+addToCartURI uri = do
+    muid <- lift maybeAuthId
+    case muid of
+        Nothing -> return ()
+        Just uid -> do
+            x <- lift $ runDB $ do
+                fid <- getFileNameIdURI uri
+                getBy $ UniqueCart uid fid
+            let inMyDocs = maybe False (const True) x
+            $(widgetFile "add-to-cart")
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)

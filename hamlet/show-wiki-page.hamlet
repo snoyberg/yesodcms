@@ -1,3 +1,4 @@
+^{addToCartURI uri}
 <article>^{widget}
 <p>
     <a href=@{EditPageR $ pieces' ext}>Edit this page

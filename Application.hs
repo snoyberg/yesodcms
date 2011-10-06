@@ -101,8 +101,8 @@ withCms conf logger f = do
                     , markdownFormatHandler
                     , htmlFormatHandler
                     , videoFormatHandler
-                    , ditaFormatHandler renderHref cache classmap (loadFileId p)
-                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute
+                    , ditaFormatHandler renderHref cache classmap (loadFileId p) addToCartURI
+                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute addToCartURI
                     ] (simpleFileStore "data") raw ialiases
 #ifdef WINDOWS
         toWaiApp h >>= f . book ialiases >> return ()
