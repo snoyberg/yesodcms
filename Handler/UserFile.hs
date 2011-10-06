@@ -295,8 +295,7 @@ getRawR t = do
     <a href="#" .close>X
     <a .inner-link href=@{RedirectorR t}>Open Topic
     $if showAdd
-        <form .addcart style=display:inline-block;margin-left:2em method=post action=@{AddCartR t}>
-            <input type=submit value="Add to MyDocs">
+        <input .addcart data-action=@{AddCartR t} type=submit value="Add to MyDocs">
     $else
         $maybe _ <- muid
             <a style=display:inline-block;margin-left:2em;color:#900 href=@{CartR}>In MyDocs

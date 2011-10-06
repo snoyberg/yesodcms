@@ -13,10 +13,10 @@ $(function(){
     $("a.close").live("click", function(){
         $(this).parent().parent().toggleClass("hidden");
     });
-    $("form.addcart > input[type=submit]").live("click", function(data){
-        var $form = $(this).parent();
-        $.post($form.attr("action"), function(){
-            $form.before("<span class='cart-added'>Added to MyDocs</span>").detach();
+    $("input.addcart").live("click", function(data){
+        var $this = $(this);
+        $.post($this.attr("data-action"), function(){
+            $this.before("<span class='cart-added'>Added to MyDocs</span>").detach();
         });
         return false;
     });

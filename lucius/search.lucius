@@ -25,3 +25,7 @@ fieldset {
     padding-left: 1em;
     color: #900;
 }
+input.addcart {
+    display: inline-block;
+    margin-left: 1em;
+}
