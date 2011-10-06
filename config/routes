@@ -7,6 +7,7 @@
 / RootR GET
 /add-article AddArticleR GET POST
 /add-video AddVideoR GET POST
+/articles ArticlesR GET
 
 /wiki/*Texts WikiR GET
 /page/#Text/*Texts PageR GET

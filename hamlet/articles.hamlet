@@ -1,0 +1,10 @@
+<h1>Knowledge Community Posts
+<div>
+    $forall article <- articles
+        <p .article>
+            <a href=@{aiLink article}>#{aiTitle article}
+            <span .author>
+                Added by #{aiUser article}, #
+                <span .timestamp>#{aiTimestamp article}
+            $if not $ T.null $ aiLabels article
+                <span .labels>#{aiLabels article}

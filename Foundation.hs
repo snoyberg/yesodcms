@@ -235,8 +235,9 @@ addToCartURI uri = do
 
 instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
-    breadcrumb AddArticleR = return ("Add article", Nothing)
-    breadcrumb AddVideoR = return ("Add video", Nothing)
+    breadcrumb AddArticleR = return ("Add article", Just RootR)
+    breadcrumb AddVideoR = return ("Add video", Just RootR)
+    breadcrumb ArticlesR = return ("Articles", Just RootR)
 
     breadcrumb (WikiR []) = return ("KB", Just RootR)
     breadcrumb (WikiR x) = do

@@ -5,6 +5,7 @@ module Handler.Root
     , postAddArticleR
     , getAddVideoR
     , postAddVideoR
+    , getArticlesR
     ) where
 
 import Foundation
@@ -91,8 +92,7 @@ getAddArticleR = do
                 ]
             fid <- runDB $ getFileNameId path
             now <- liftIO getCurrentTime
-            _ <- runDB $ insert $ Article title name now uid fid
-            addLabel fid "How to Article"
+            runDB $ insert (Article title name now uid fid) >> addLabel fid "How to Article"
             setMessage "Your article has been added. You can now set labels on the article."
             r <- getUrlRenderParams
             redirectText RedirectTemporary $ r (EditPageR ["wiki", name, "index.html"]) [("labels", "yes")]
@@ -128,8 +128,7 @@ getAddVideoR = do
             liftIO $ fsPutFile fs path $ enumList 1 [TE.encodeUtf8 text]
             fid <- runDB $ getFileNameId path
             now <- liftIO getCurrentTime
-            _ <- runDB $ insert $ Article title name now uid fid
-            addLabel fid "Video"
+            runDB $ insert (Article title name now uid fid) >> addLabel fid "Video"
             setMessage "Your video has been added. You can now set labels on the video."
             r <- getUrlRenderParams
             redirectText RedirectTemporary $ r (EditPageR ["wiki", name, "index.video"]) [("labels", "yes")]
@@ -138,7 +137,9 @@ getAddVideoR = do
 postAddVideoR :: Handler RepHtml
 postAddVideoR = getAddVideoR
 
-addLabel :: FileNameId -> T.Text -> Handler ()
-addLabel fid name = runDB $ do
-    lids <- fmap (map fst) $ selectList [LabelName ==. name] []
-    mapM_ (insert . FileLabel fid) lids
+getArticlesR :: Handler RepHtml
+getArticlesR = do
+    articles <- runDB $ selectList [] [Desc ArticleAdded, LimitTo 30] >>= mapM (getArticleInfo . snd)
+    defaultLayout $ do
+        toWidget $(luciusFile "root")
+        $(widgetFile "articles")

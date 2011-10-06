@@ -10,6 +10,8 @@
                         <span .timestamp>#{aiTimestamp article}
                     $if not $ T.null $ aiLabels article
                         <span .labels>#{aiLabels article}
+        <h6>
+            <a href=@{ArticlesR}>See the rest
     <section .column .active>
         <h1>Search Knowledge Community
         <div>

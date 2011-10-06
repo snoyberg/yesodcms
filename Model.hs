@@ -49,3 +49,8 @@ getFileNameId t =
 
 getFileNameIdURI :: (PersistBackend b m, Functor (b m)) => URI -> b m (Key b (FileNameGeneric backend))
 getFileNameIdURI = getFileNameId . uriPath
+
+addLabel :: (PersistBackend b m, Functor (b m)) => Key b FileName -> T.Text -> b m ()
+addLabel fid name = do
+    lids <- fmap (map fst) $ selectList [LabelName ==. name] []
+    mapM_ (insert . FileLabel fid) lids
