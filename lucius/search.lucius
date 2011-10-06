@@ -7,6 +7,8 @@
     }
     .mydocs {
         width: 200px;
+    }
+    .cart {
         zoom: 0.8;
     }
 }
@@ -32,4 +34,9 @@ fieldset {
 input.addcart {
     display: inline-block;
     margin-left: 1em;
+}
+
+#search {
+    display: table;
+    border-spacing: 1em;
 }
