@@ -25,7 +25,6 @@ import System.Random.Mersenne
 import Data.Word (Word)
 import Data.Time
 import Data.Maybe (fromMaybe)
-import Handler.EditPage (getFileNameId)
 import Handler.Comments (prettyDateTime)
 import Handler.Cart (getCartWidget)
 import FormatHandler.Video

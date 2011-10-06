@@ -7,7 +7,6 @@ module Handler.EditPage
     , setCanons
     , getDeletePageR
     , postDeletePageR
-    , getFileNameId
     ) where
 
 import Foundation
@@ -134,10 +133,6 @@ setCanons t = do
                                     , canonPathRedirect = render route query
                                     }
                                 return ()
-
-getFileNameId :: T.Text -> YesodDB Cms Cms FileNameId
-getFileNameId t =
-    fmap (either fst id) $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
 
 postFileLabelsR :: [T.Text] -> Handler ()
 postFileLabelsR ts = do

@@ -34,7 +34,6 @@ import qualified Data.ByteString.Lazy as L
 import Data.Time
 import Network.HTTP.Enumerator
 import Data.IORef (writeIORef)
-import Handler.EditPage (getFileNameId)
 
 getUsersR :: Handler RepHtml
 getUsersR = do

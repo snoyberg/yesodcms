@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes, TypeFamilies, GeneralizedNewtypeDeriving, TemplateHaskell, GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Model where
 
 import Yesod
@@ -7,6 +8,8 @@ import FileStore (FileStorePath)
 import Data.Time (UTCTime)
 import Text.Hamlet (shamlet)
 import qualified Yesod.Goodies.Gravatar as G
+import qualified Data.Text as T
+import Data.Maybe (fromMaybe)
 
 newtype BlogSlugT = BlogSlugT Text
     deriving (Read, Eq, Show, PersistField, SinglePiece, Ord)
@@ -38,3 +41,7 @@ userGravatar size u = G.gravatarImg (userEmail u) G.defaultOptions
     { G.gSize = Just $ G.Size size
     , G.gDefault = Just G.MM
     }
+
+getFileNameId :: (PersistBackend b m, Functor (b m)) => Text -> b m (Key b (FileNameGeneric backend))
+getFileNameId t =
+    fmap (either fst id) $ insertBy $ FileName (T.append "fs:" $ fromMaybe t $ T.stripPrefix "fs:" t) Nothing Nothing

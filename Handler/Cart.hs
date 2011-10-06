@@ -15,7 +15,6 @@ module Handler.Cart
 import Foundation hiding (hamletFile)
 import Text.Hamlet (hamletFile)
 import qualified Data.Text as T
-import Handler.EditPage (getFileNameId)
 import Control.Monad (unless)
 import Data.Monoid (mconcat)
 import FileStore
