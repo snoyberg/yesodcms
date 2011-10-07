@@ -20,6 +20,7 @@ import Data.ByteString (ByteString)
 import Data.Dynamic (Dynamic, toDyn)
 import FormatHandler.Html
 import FormatHandler.Text
+import FormatHandler.LHaskell
 import FormatHandler.Markdown
 import FormatHandler.DITA
 import FileStore
@@ -94,9 +95,10 @@ withCms conf logger f = do
         ialiases <- runConnectionPool (selectList [] []) p >>= newIORef . map snd
         let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
             h = Cms conf logger s p
-                    [ textFormatHandler
-                    , markdownFormatHandler
+                    [ markdownFormatHandler
                     , htmlFormatHandler
+                    , lhaskellFormatHandler
+                    , textFormatHandler
                     , ditaFormatHandler renderHref cache classmap (loadFileId p)
                     , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute
                     ] (simpleFileStore "data") raw ialiases

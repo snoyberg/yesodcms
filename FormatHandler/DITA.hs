@@ -6,6 +6,7 @@
 module FormatHandler.DITA
     ( ditaFormatHandler
     , ditamapFormatHandler
+    , lhaskellToHTML
     ) where
 
 import Debug.Trace
