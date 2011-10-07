@@ -460,24 +460,28 @@ lhaskellToHTML :: T.Text -> Maybe [Node]
 lhaskellToHTML =
     go' 1 . map go . T.lines . T.filter (/= '\r')
   where
-    go :: T.Text -> Either [Node] T.Text
+    go :: T.Text -> Either T.Text T.Text
     go t
         | a == "> " = Right b
         | a' == ">" = Right b'
-        | otherwise = Left $
-            case htmlToNodes t of
-                Nothing -> [xml|<p>#{t}|]
-                Just ns -> [xml|<p>^{ns}|]
+        | otherwise = Left t
       where
         (a, b) = T.splitAt 2 t
         (a', b') = T.splitAt 1 t
 
-    go' :: Int -> [Either [Node] T.Text] -> Maybe [Node]
+    go' :: Int -> [Either T.Text T.Text] -> Maybe [Node]
     go' _ [] = Just []
-    go' i (Left x:xs) = do
-        ns <- go' i xs
-        Just $ x ++ ns
-    go' i x = do
+    go' i x@(Left{}:_) = do
+        let y' = T.unlines y
+        let y'' =
+                case markdownToXML y' of
+                    Nothing -> [xml|<p>#{y'}|]
+                    Just ns -> [xml|<p>^{ns}|]
+        ns <- go' i z
+        Just $ y'' ++ ns
+      where
+        (y, z) = someLefts id x
+    go' i x@(Right{}:_) = do
         y' <- haskellToHTML i (T.unlines y)
         ns <- go' (i + length y) z
         Just $ y' ++ ns
@@ -485,6 +489,9 @@ lhaskellToHTML =
         (y, z) = someRights id x
     someRights front (Right x:xs) = someRights (front . (:) x) xs
     someRights front x = (front [], x)
+
+    someLefts front (Left x:xs) = someLefts (front . (:) x) xs
+    someLefts front x = (front [], x)
 
 haskellToHTML :: Int -> T.Text -> Maybe [Node]
 haskellToHTML line t = do

@@ -17,6 +17,7 @@ import Data.Enumerator (enumList)
 import FormatHandler.Html (splitTitle, titleForm)
 import FormatHandler.DITA (lhaskellToHTML)
 import Text.Blaze (toHtml)
+import Text.Hamlet.XML (xml)
 
 lhaskellFormatHandler :: FormatHandler master
 lhaskellFormatHandler = FormatHandler
@@ -40,4 +41,4 @@ lhaskellFormatHandler = FormatHandler
                 id' <- lift newIdent
                 toWidget [lucius|##{id'} { white-space: pre }|]
                 toWidget [shamlet|<div ##{id'}>#{t}|]
-            Just nodes -> toWidget $ mapM_ toHtml nodes
+            Just nodes -> toWidget $ mapM_ toHtml [xml|<article class=lhaskell>^{nodes}|]
