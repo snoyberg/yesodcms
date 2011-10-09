@@ -62,5 +62,10 @@ function setupButtons() {
 }
 
 function loadForm() {
-    $("#results-inner").load("@{SearchR}?raw=yes&" + $("#search").serialize());
+    $.getJSON("@{SearchR}?raw=yes&" + $("#search").serialize(), function(x){
+        $("#results-inner").html(x.content);
+        for (k in x.counts) {
+            $("label[for=label-" + k + "]").next().text("(" + x.counts[k] + ")");
+        }
+    });
 }

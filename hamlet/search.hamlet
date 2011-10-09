@@ -13,6 +13,8 @@
                         <div>
                             <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
                             <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
+                            <span .count>
+                                (^{getLabelCount $ fst label})
             <input .refine type=submit value="Refine Search">
     ^{results}
     $maybe cartTable <- mcartTable

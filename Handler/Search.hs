@@ -33,6 +33,8 @@ import qualified Data.Set as Set
 import Text.Hamlet (hamletFile)
 import Handler.Cart (getCarts)
 import Settings.StaticFiles
+import Text.Blaze.Renderer.Text (renderHtml)
+import qualified Data.Aeson as A
 
 data MInfo = MInfo
     { miFile :: T.Text
@@ -85,16 +87,40 @@ getSearchR = do
     let checkedLabels = mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
     let isChecked = flip elem checkedLabels
     groupedCheckedLabels <- runDB $ groupLabels checkedLabels
-    resultsInner <-
+    (matches, resultsInner) <-
             case mres of
-                Nothing -> return [hamlet||]
+                Nothing -> return ([], [hamlet||])
                 Just (S.Ok qr) -> do
-                    mis <- getMInfos qr groupedCheckedLabels mquery
-                    return $(hamletFile "hamlet/search-results-inner.hamlet")
-                Just x -> return [hamlet|<p>Error running search: #{show x}|]
+                    let ms = S.matches qr
+                    mis <- getMInfos ms groupedCheckedLabels mquery
+                    return (ms, $(hamletFile "hamlet/search-results-inner.hamlet"))
+                Just x -> return ([], [hamlet|<p>Error running search: #{show x}|])
+    let getLabelCountI :: LabelId -> Handler Int
+        getLabelCountI label = do
+            let cls =
+                    if isChecked label
+                        then filter (/= label) checkedLabels
+                        else label : checkedLabels
+            gcls <- runDB $ groupLabels cls
+            mis <- getMInfos matches gcls mquery
+            return $ length mis
+    let getLabelCount :: LabelId -> Widget
+        getLabelCount label = do
+            len <- lift $ getLabelCountI label
+            [whamlet|#{show len}|]
     isRaw <- runInputGet $ iopt boolField "raw"
     case isRaw of
-        Just True -> hamletToRepHtml (resultsInner :: HtmlUrl CmsRoute)
+        Just True -> do
+            r <- getUrlRenderParams
+            let str = TL.toStrict $ renderHtml $ resultsInner r
+            labels <- runDB $ selectList [] []
+            withCnt <- flip mapM labels $ \(label, _) -> do
+                i <- getLabelCountI label
+                return (toSinglePiece label, A.String $ T.pack $ show i)
+            sendResponse $ RepJson $ toContent $ A.Object $ Map.fromList
+                [ ("content", A.String str)
+                , ("counts", A.Object $ Map.fromList withCnt)
+                ]
         _ -> do
             labels <- runDB getLabels
             let results = $(widgetFile "search-results")
@@ -178,8 +204,8 @@ getSearchXmlpipeR = do
                                 update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
                                 return [(fid, T.concat [title, " ", text])]
 
-getMInfos :: S.QueryResult -> Map.Map GroupId (Set.Set LabelId) -> Maybe T.Text -> Handler [MInfo]
-getMInfos qr groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM (S.matches qr) $ \S.Match { S.documentId = did } -> do
+getMInfos :: [S.Match] -> Map.Map GroupId (Set.Set LabelId) -> Maybe T.Text -> Handler [MInfo]
+getMInfos matches groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
     let fid = Key $ PersistInt64 did
     mf <- verifyFile groupedCheckedLabels fid
     case mf of
