@@ -8,6 +8,8 @@
 /add-article AddArticleR GET POST
 /add-video AddVideoR GET POST
 /articles ArticlesR GET
+/how-to-articles HowToArticlesR GET
+/videos VideosR GET
 
 /wiki/*Texts WikiR GET
 /page/#Text/*Texts PageR GET

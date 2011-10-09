@@ -6,6 +6,8 @@ module Handler.Root
     , getAddVideoR
     , postAddVideoR
     , getArticlesR
+    , getHowToArticlesR
+    , getVideosR
     ) where
 
 import Foundation
@@ -41,19 +43,21 @@ data ArticleInfo = ArticleInfo
     , aiUser :: Text
     , aiLabels :: Text
     , aiTimestamp :: Text
+    , aiLids :: [LabelId]
     }
 
 getArticleInfo :: Article -> YesodDB Cms Cms ArticleInfo
 getArticleInfo a = do
     u <- get404 $ articleUser a
-    lids <- selectList [FileLabelFile ==. articleFile a] []
-    labels <- mapM get404 $ map (fileLabelLabel . snd) lids
+    lids <- fmap (map $ fileLabelLabel . snd) $ selectList [FileLabelFile ==. articleFile a] []
+    labels <- mapM get404 lids
     return ArticleInfo
         { aiTitle = articleTitle a
         , aiLink = WikiR [articleName a]
         , aiUser = fromMaybe (userHandle u) (userName u)
         , aiLabels = T.intercalate "; " $ map labelName labels
         , aiTimestamp = prettyDateTime $ articleAdded a
+        , aiLids = lids
         }
 
 addArticleForm :: Html -> Form Cms Cms (FormResult (Text, Text), Widget)
@@ -140,6 +144,23 @@ postAddVideoR = getAddVideoR
 getArticlesR :: Handler RepHtml
 getArticlesR = do
     articles <- runDB $ selectList [] [Desc ArticleAdded, LimitTo 30] >>= mapM (getArticleInfo . snd)
+    defaultLayout $ do
+        toWidget $(luciusFile "root")
+        $(widgetFile "articles")
+
+getHowToArticlesR :: Handler RepHtml
+getHowToArticlesR = getFiltered "How to Article"
+
+getVideosR :: Handler RepHtml
+getVideosR = getFiltered "Video"
+
+getFiltered :: T.Text -> Handler RepHtml
+getFiltered t = do
+    articles <- runDB $ do
+        ml <- selectFirst [LabelName ==. t] []
+        lid <- fmap fst $ maybe (lift notFound) return ml
+        ais <- selectList [] [Desc ArticleAdded, LimitTo 50] >>= mapM (getArticleInfo . snd)
+        return $ filter (\ai -> lid `elem` aiLids ai) ais
     defaultLayout $ do
         toWidget $(luciusFile "root")
         $(widgetFile "articles")

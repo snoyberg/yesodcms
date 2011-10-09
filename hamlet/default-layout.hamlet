@@ -17,9 +17,9 @@
                     <li>
                         <a href=@{CartR}>MyDocs
                 <li>
-                    <a href=@{WikiR $ return "How to Articles"}>How to Articles
+                    <a href=@{HowToArticlesR}>How to Articles
                 <li>
-                    <a href=@{WikiR $ return "Videos"}>Videos
+                    <a href=@{VideosR}>Videos
                 <li>
                     <a href="http://feeds.feedburner.com/emersonsocialkb" title="Subscribe to my feed" rel="alternate" type="application/rss+xml">
                         <img src=@{StaticR feed_png} style="border:0;height:16px">

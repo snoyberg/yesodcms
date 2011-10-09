@@ -238,6 +238,8 @@ instance YesodBreadcrumbs Cms where
     breadcrumb AddArticleR = return ("Add article", Just RootR)
     breadcrumb AddVideoR = return ("Add video", Just RootR)
     breadcrumb ArticlesR = return ("Articles", Just RootR)
+    breadcrumb HowToArticlesR = return ("How-to Articles", Just RootR)
+    breadcrumb VideosR = return ("Videos", Just RootR)
 
     breadcrumb (WikiR []) = return ("KB", Just RootR)
     breadcrumb (WikiR x) = do
