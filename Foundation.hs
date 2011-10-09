@@ -237,7 +237,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb RootR = return ("Homepage", Nothing)
     breadcrumb AddArticleR = return ("Add article", Just RootR)
     breadcrumb AddVideoR = return ("Add video", Just RootR)
-    breadcrumb ArticlesR = return ("Articles", Just RootR)
+    breadcrumb ArticlesR = return ("Posts", Just RootR)
     breadcrumb HowToArticlesR = return ("How-to Articles", Just RootR)
     breadcrumb VideosR = return ("Videos", Just RootR)
 

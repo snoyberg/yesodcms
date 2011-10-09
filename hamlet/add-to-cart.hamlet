@@ -2,4 +2,4 @@ $if inMyDocs
     <p>In MyDocs
 $else
     <form method=post action=@{AddCartR $ uriPath uri}>
-        <input type=submit value="Add to MyDocs">
+        <input .inner-addcart type=submit value="Add to MyDocs">
