@@ -11,7 +11,7 @@ module Handler.Root
     ) where
 
 import Foundation
-import Handler.Search (getLabels)
+import Handler.Search (getLabels, DeviceGroup (..), toDeviceGroups)
 import Yesod.Auth (apLogin)
 import Data.Text (Text)
 import FormatHandler.Html (alohaHtmlField)
@@ -76,7 +76,9 @@ getRootR = do
     ((_, addVideoWidget), _) <- runFormPost $ videoForm Nothing
     let articleLink a = WikiR [articleName a]
     articles <- runDB $ selectList [] [Desc ArticleAdded, LimitTo 5] >>= mapM (getArticleInfo . snd)
-    defaultLayout $(widgetFile "root")
+    defaultLayout $ do
+        $(widgetFile "search-device-groups")
+        $(widgetFile "root")
 
 getAddArticleR :: Handler RepHtml
 getAddArticleR = do

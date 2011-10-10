@@ -1,0 +1,24 @@
+function setupDeviceGroups(counts) {
+    // Device groups
+    $(".devicegroup").hide();
+    $(".devicegrouplabel").prepend("<input type='checkbox'>");
+
+    if (counts) $(".devicegrouplabel").append("<span class='count'/>");
+    $(".devicegrouplabel span.name").click(function(){$(this).parent().next().toggle()});
+    $(".devicegrouplabel input").click(function(){
+        $(this).parent().next().find("input").attr("checked", $(this).attr("checked") == "checked" ? true : false);
+        loadForm();
+    });
+    if (counts) loadGroupCounts();
+}
+
+function loadGroupCounts() {
+    $.each($(".devicegrouplabel .count"), function(i, e){
+        var $e = $(e);
+        var count = 0;
+        $.each($e.parent().next().find(".count"), function(i, e){
+            count = Math.max(parseInt($(e).text().replace(/\((.*)\)/, "$1")), count);
+        });
+        $(e).text("(" + count + ")");
+    });
+}

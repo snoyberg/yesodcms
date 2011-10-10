@@ -9,12 +9,24 @@
             $forall grouppair <- safeTail labels
                 <fieldset>
                     <legend>#{groupName $ snd $ fst grouppair}
-                    $forall label <- snd grouppair
-                        <div>
-                            <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
-                            <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
-                            <span .count>
-                                (^{getLabelCount $ fst label})
+                    $maybe dgs <- toDeviceGroups $ snd grouppair
+                        $forall dg <- dgs
+                            <p .devicegrouplabel>
+                                <span .name>#{dgName dg}
+                            <div .devicegroup>
+                                $forall label <- dgLabels dg
+                                    <div>
+                                        <input type=checkbox id=label-#{toSinglePiece $ snd label} name=labels value=#{toSinglePiece $ snd label} :isChecked $ snd label:checked>
+                                        <label for=label-#{toSinglePiece $ snd label}>#{fst label}
+                                        <span .count>
+                                            (^{getLabelCount $ snd label})
+                    $nothing
+                        $forall label <- snd grouppair
+                            <div>
+                                <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
+                                <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
+                                <span .count>
+                                    (^{getLabelCount $ fst label})
             <input .refine type=submit value="Refine Search">
     ^{results}
     $maybe cartTable <- mcartTable

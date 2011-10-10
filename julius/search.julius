@@ -39,6 +39,8 @@ $(function(){
         loadForm();
     });
     setupButtons();
+
+    setupDeviceGroups(true);
 });
 
 function setupButtons() {
@@ -67,5 +69,6 @@ function loadForm() {
         for (k in x.counts) {
             $("label[for=label-" + k + "]").next().text("(" + x.counts[k] + ")");
         }
+        loadGroupCounts();
     });
 }

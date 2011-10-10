@@ -3,6 +3,8 @@ module Handler.Search
     ( getSearchR
     , getSearchXmlpipeR
     , getLabels
+    , DeviceGroup (..)
+    , toDeviceGroups
     ) where
 
 import Foundation hiding (hamletFile)
@@ -99,7 +101,7 @@ getSearchR = do
         getLabelCountI label = do
             let cls =
                     if isChecked label
-                        then filter (/= label) checkedLabels
+                        then checkedLabels -- FIXME remove all other labels that are in the same group
                         else label : checkedLabels
             gcls <- runDB $ groupLabels cls
             mis <- getMInfos matches gcls mquery
@@ -135,7 +137,9 @@ getSearchR = do
                             toWidget $(luciusFile "cart")
                             toWidget $(juliusFile "cart")
                             $(widgetFile "cart-table")
-            defaultLayout $(widgetFile "search")
+            defaultLayout $ do
+                $(widgetFile "search-device-groups")
+                $(widgetFile "search")
   where
     config = defaultConfig
         { port = 9312
@@ -228,3 +232,22 @@ getMInfos matches groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM ma
                             }
                     _ -> return Nothing
         _ -> return Nothing
+
+data DeviceGroup = DeviceGroup
+    { dgName :: T.Text
+    , dgLabels :: [(T.Text, LabelId)]
+    }
+
+toDeviceGroups :: [(LabelId, Label)] -> Maybe [DeviceGroup]
+toDeviceGroups orig = do
+    pairs <- mapM toPair orig
+    let m = Map.unionsWith Map.union pairs
+    return $ map (\(k, v) -> DeviceGroup k $ Map.toList v) $ Map.toList m
+  where
+    toPair (lid, l) = do
+        let (x', y') = T.break (== '>') $ labelName l
+        let x = T.strip x'
+            y = T.strip $ T.drop 1 y'
+        if T.null x || T.null y
+            then Nothing
+            else Just $ Map.singleton x $ Map.singleton y lid

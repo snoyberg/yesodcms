@@ -1,0 +1,8 @@
+.devicegrouplabel span {
+    color: blue;
+    cursor: pointer;
+}
+
+.devicegroup {
+    margin-left: 1em;
+}
