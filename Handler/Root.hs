@@ -61,11 +61,22 @@ getArticleInfo a = do
         }
 
 addArticleForm :: Html -> Form Cms Cms (FormResult (Text, Text), Widget)
-addArticleForm = renderTable $ (,)
-    <$> areq textField "Title" Nothing
-    <*> areq alohaHtmlField "Content"
+addArticleForm html = do
+    (title, tview) <- mreq textField "Title" Nothing
+    (content, cview) <- mreq alohaHtmlField "Content"
             { fsId = Just "aloha"
             } Nothing
+    let widget = [whamlet|
+<tr>
+    <td colspan=2>
+        Title: #
+        ^{fvInput tview}
+        \#{html}
+<tr>
+    <td colspan=2>
+        ^{fvInput cview}
+|]
+    return ((,) <$> title <*> content, widget)
 
 getRootR :: Handler RepHtml
 getRootR = do

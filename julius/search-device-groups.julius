@@ -10,6 +10,9 @@ function setupDeviceGroups(counts) {
         loadForm();
     });
     if (counts) loadGroupCounts();
+    $.each($(".devicegrouplabel input[type=checkbox]"), function(i, e){
+        if (!$(e).parent().next().find("input").not(":checked").length) $(e).attr("checked", true);
+    });
 }
 
 function loadGroupCounts() {

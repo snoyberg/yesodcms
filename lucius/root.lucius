@@ -1,17 +1,19 @@
 article {
     display: table;
-    border-spacing: 1em;
 }
 .column {
     display: table-cell;
-    border: 1px solid #900;
-    margin-right: 5px;
+    border-right: 1px solid #aaa;
+    padding: 0 1em;
     height: 100%;
     -webkit-transition: width 0.25s linear;
-    padding: 0.5em;
-    height: 2em;
-    width: 100px;
-    zoom: 0.7;
+}
+.column:first-child {
+    padding-left: 0;
+}
+.column:last-child {
+    padding-right: 0;
+    border-right: 0;
 }
 .column > div, .column > p {
     opacity: 0.2;
@@ -30,10 +32,6 @@ article {
     font-style: italic;
 }
 
-.column.active {
-    width: 550px;
-    zoom: 1;
-}
 .active #add-article {
     zoom: 1;
     overflow: initial;
@@ -42,21 +40,68 @@ article {
     opacity: 1;
 }
 
-.column h2 {
+.column h1 {
+    color: #f89d30;
     font-size: 1em;
 }
-
-.column:hover {
-    background-color: #fee;
-}
-.column.active:hover {
-    background-color: #fff;
-}
-
-.column.active #aloha-container {
-    width: 500px !important;
+.column h2 {
+    font-size: 1em;
+    color: #999;
 }
 
 .active .oninactive {
     display: none;
+}
+
+.posts {
+    width: 200px;
+}
+.posts.active {
+    width: 400px;
+}
+
+.create {
+    width: 200px;
+}
+.create.active {
+    width: 500px;
+}
+
+.cart table {
+    zoom: 0.6;
+}
+
+.search h2 {
+    padding-bottom: 1em;
+}
+.search h2, fieldset {
+    border: 0;
+    border-bottom: 1px solid black;
+}
+fieldset:last-of-type {
+    border-bottom: 0;
+}
+.search input[type=submit] {
+    display: none;
+}
+legend {
+    color: #f89d30;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+fieldset {
+    margin-top: 1em;
+}
+input[type=checkbox] {
+    margin-right: 0.5em;
+}
+.search label, .search .name {
+    color: #124271;
+    font-weight: bold;
+}
+.search .devicegroup label {
+    font-weight: normal;
+}
+.devicegrouplabel {
+    margin: 0;
 }

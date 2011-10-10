@@ -31,4 +31,6 @@ staticFilesList "static"
     , "up.png"
     , "down.png"
     , "delete.png"
+    , "custom/logo.gif"
+    , "custom/search-submit.png"
     ]

@@ -1,5 +1,5 @@
 <article .init>
-    <section .column>
+    <section .column .posts>
         <h1>New Knowledge Community Posts
         <div>
             $forall article <- articles
@@ -12,12 +12,14 @@
                         <span .labels>#{aiLabels article}
         <h6>
             <a href=@{ArticlesR}>See the rest
-    <section .column .active>
+    <section .column .active .search>
         <h1>Search Knowledge Community
         <div>
             <form method=get action=@{SearchR}>
                 <p>
                     <input type=search placeholder=Search name=q>
+                    \ #
+                    <input type=image value=Go src=@{StaticR custom_search_submit_png}>
                 <h2>Refine Search
                 $forall grouppair <- safeTail labels
                     <fieldset>
@@ -37,7 +39,7 @@
                                     <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label}>
                                     <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
                 <input type=submit value="Search">
-    <section .column>
+    <section .column .create>
         <h1>Create Knowledge Article
         <div>
             $maybe _ <- muid
@@ -60,7 +62,7 @@
                 ^{apLogin authGoogleEmail AuthR}
         <p .oninactive>Click here to create a knowledge article.
     $maybe cart <- mcart
-        <section .column>
+        <section .column .cart>
             <h1>MyDocs
             <div>
                 ^{cart}

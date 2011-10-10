@@ -34,7 +34,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Text.Hamlet (hamletFile)
 import Handler.Cart (getCarts)
-import Settings.StaticFiles
 import Text.Blaze.Renderer.Text (renderHtml)
 import qualified Data.Aeson as A
 

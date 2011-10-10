@@ -19,7 +19,6 @@ import Control.Monad (unless)
 import Data.Monoid (mconcat)
 import FileStore
 import FormatHandler
-import Settings.StaticFiles
 import System.Random.Mersenne
 import System.Directory (createDirectoryIfMissing)
 import Data.Word (Word)

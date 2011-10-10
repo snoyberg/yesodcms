@@ -10,7 +10,6 @@ module Application
 
 import Foundation
 import Settings
-import Settings.StaticFiles (static)
 import Yesod.Auth
 import Yesod.Logger (Logger)
 import Yesod.Default.Config

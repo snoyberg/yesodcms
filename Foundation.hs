@@ -14,6 +14,7 @@ module Foundation
     , module Yesod
     , module Settings
     , module Model
+    , module Settings.StaticFiles
     , StaticRoute (..)
     , AuthRoute (..)
     , fileTitle
