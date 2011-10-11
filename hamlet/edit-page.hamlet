@@ -20,6 +20,15 @@ $if not $ null labels
                             <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
         <p>
             <input type=submit value="Update Labels">
+    <h2>Label file
+    <p>
+        <a href=@{LabelListR ts}>Get label list (CSV)
+    <form method=post action=@{LabelListR ts} enctype=multipart/form-data>
+        <p>
+            CSV file: #
+            <input type=file name=csv>
+            \ #
+            <input type=submit value=Upload>
 $if toView
     <h2>View on site
     <ul>

@@ -7,6 +7,8 @@ module Handler.EditPage
     , setCanons
     , getDeletePageR
     , postDeletePageR
+    , getLabelListR
+    , postLabelListR
     ) where
 
 import Foundation
@@ -26,17 +28,26 @@ import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
 import Handler.Profile (getLabels)
 import Control.Applicative (pure)
+import Text.CSV
+import qualified Data.ByteString.Lazy.Char8 as L8
+import qualified Data.Map as Map
 
 checkPerms :: [T.Text] -> Handler ()
-checkPerms [] = permissionDenied "Cannot edit page"
-checkPerms ("wiki":_) = return ()
-checkPerms ("page":_) = do
-    (_, u) <- requireAuth
+checkPerms ts = do
+    u <- requireAuth
+    checkPerms' u ts
+
+checkPerms' :: Monad m => (UserId, User) -> [T.Text] -> GGHandler sub Cms m ()
+checkPerms' _ [] = permissionDenied "Cannot edit page"
+checkPerms' _ ("wiki":_) = return ()
+checkPerms' (_, u) ("page":_) =
     unless (userAdmin u) $ permissionDenied "Only admins can edit this page"
-checkPerms ("home":user:_) = do
-    uid <- requireAuthId
+checkPerms' (uid, _) ("home":user:_) = do
     unless (toSinglePiece uid == user) $ permissionDenied "You do not own this page"
-checkPerms _ = permissionDenied "Path not understood"
+checkPerms' _ _ = permissionDenied "Path not understood"
+
+checkURIPerms :: Monad m => (UserId, User) -> URI -> GGHandler sub Cms m ()
+checkURIPerms u uri = checkPerms' u $ T.splitOn "/" $ uriPath uri
 
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
@@ -146,4 +157,51 @@ postFileLabelsR ts = do
         deleteWhere [FileLabelFile ==. fid]
         mapM_ (insert . FileLabel fid) lids
     setMessage "Labels updated"
+    redirect RedirectTemporary $ EditPageR ts
+
+getLabelListR :: [T.Text] -> Handler (ContentType, Content)
+getLabelListR ts = do
+    checkPerms ts
+    let t = T.intercalate "/" ts
+    let ext = snd $ T.breakOnEnd "." t
+    Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
+    fh <- maybe notFound return $ findHandler ext fhs
+    uri <- liftIO (fsGetFile fs t) >>= maybe notFound return
+    rows <- liftIO $ fmap (map fst) (fhRefersTo fh (fsSM fs) uri) >>= mapM (\u -> do
+        let t' = uriPath u
+        title <- fileTitle' fs fhs t'
+        return [show $ toNetworkURI u, T.unpack title]
+        )
+    setHeader "Content-disposition" $ encodeUtf8 $ "attachment; filename=" `T.append` t `T.append` ".csv"
+    return ("text/csv", toContent $ printCSV $ ["URI", "Title"] : rows)
+
+postLabelListR :: [T.Text] -> Handler ()
+postLabelListR ts = do
+    user <- requireAuth
+    (_, files) <- runRequestBody
+    csvFile <- maybe (invalidArgs ["No file uploaded" :: T.Text]) return $ lookup "csv" files
+    records <- either (invalidArgs . return . T.pack . show) return $ parseCSV "" $ L8.unpack $ fileContent csvFile
+    (frow, rest) <-
+        case records of
+            [] -> invalidArgs ["No rows"]
+            (x:xs) -> return (x, xs)
+    let toMap = Map.fromList . zip frow
+    let maps = map toMap rest
+    runDB $ forM_ maps $ \m -> do
+        uriT <- maybe (lift $ invalidArgs ["No URI"]) (return . T.pack) $ Map.lookup "URI" m
+        case parseURI uriT of
+            Nothing -> return ()
+            Just uri -> do
+                lift $ checkURIPerms user uri
+                forM_ (Map.toList m) $ \(k, v) -> do
+                    mg <- getBy $ UniqueGroup $ T.pack k
+                    fid <- getFileNameIdURI uri
+                    case mg of
+                        Nothing -> return ()
+                        Just (gid, _) -> do
+                            ml <- getBy $ UniqueLabel gid $ T.pack v
+                            case ml of
+                                Nothing -> return ()
+                                Just (lid, _) -> insertBy (FileLabel fid lid) >> return ()
+    setMessage "Labels applied"
     redirect RedirectTemporary $ EditPageR ts

@@ -136,6 +136,7 @@ executable         yesodcms
                  , attempt
                  , control-monad-attempt
                  , authenticate
+                 , csv
 
     if !os(windows)
          build-depends: unix
