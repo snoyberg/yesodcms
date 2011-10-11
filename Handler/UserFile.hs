@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings, NamedFieldPuns #-}
+{-# LANGUAGE PatternGuards #-}
 module Handler.UserFile
     ( getUsersR
     , getUserFileIntR
@@ -15,7 +16,7 @@ import qualified Data.Text as T
 import Data.Monoid (mempty)
 import FileStore
 import FormatHandler
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe, isJust)
@@ -34,6 +35,14 @@ import qualified Data.ByteString.Lazy as L
 import Data.Time
 import Network.HTTP.Enumerator
 import Data.IORef (writeIORef)
+import System.Process hiding (readProcess)
+import System.Exit
+import Control.Exception hiding (Handler)
+import System.IO (hFlush, hClose)
+import System.IO.Error
+import Control.Concurrent.MVar
+import Control.Concurrent
+import GHC.IO.Exception (IOErrorType(..))
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -249,29 +258,81 @@ postUserFileR user ts = do
 
     upload fs rawFiles fhs toPath entry = do
         let t = toPath entry
-        let ext = snd $ T.breakOnEnd "." t
+        let (beforeext, ext) = T.breakOnEnd "." t
         let lbs = fromEntry entry
         let onSucc = tell (Set.singleton t, Set.empty)
         let onErr = tell (Set.empty, Set.singleton $ T.pack $ eRelativePath entry)
         case Map.lookup (T.toLower ext) rawFiles of
-            Nothing ->
-                case findHandler ext fhs of
-                    Nothing -> onErr
-                    Just fh ->
-                        case fhFilter fh lbs of
-                            Just enum -> liftIO $ fsPutFile fs t enum
-                            Nothing -> onErr
+            Nothing
+                | T.toLower ext `elem` ["eps", "svg"] -> do
+                    let t' = beforeext `T.append` "png"
+                    lbs' <- liftIO $ epsToPng lbs
+                    liftIO $ fsPutFile fs t' $ enumList 8 $ L.toChunks lbs'
+                    onSucc
+                | otherwise ->
+                    case findHandler ext fhs of
+                        Nothing -> onErr
+                        Just fh ->
+                            case fhFilter fh lbs of
+                                Just enum -> liftIO $ fsPutFile fs t enum
+                                Nothing -> onErr
             Just{} -> do
                 liftIO $ fsPutFile fs t $ enumList 8 $ L.toChunks lbs
                 onSucc
 
+-- | Use ImageMagick to convert an EPS to a PNG
+epsToPng :: L.ByteString -> IO L.ByteString
+epsToPng = readProcess "convert" ["-", "png:-"]
+
+readProcess
+    :: FilePath                 -- ^ command to run
+    -> [String]                 -- ^ any arguments
+    -> L.ByteString             -- ^ standard input
+    -> IO L.ByteString          -- ^ stdout
+readProcess cmd args input = do
+    (Just inh, Just outh, _, pid) <-
+        createProcess (proc cmd args){ std_in  = CreatePipe,
+                                       std_out = CreatePipe,
+                                       std_err = Inherit }
+
+    -- fork off a thread to start consuming the output
+    output  <- L.hGetContents outh
+    outMVar <- newEmptyMVar
+    _ <- forkIO $ evaluate (L.length output) >> putMVar outMVar ()
+
+    -- now write and flush any input
+    when (not (L.null input)) $ do L.hPutStr inh input; hFlush inh
+    hClose inh -- done with stdin
+
+    -- wait on the output
+    takeMVar outMVar
+    hClose outh
+
+    -- wait on the process
+    ex <- waitForProcess pid
+
+    case ex of
+     ExitSuccess   -> return output
+     ExitFailure r -> 
+      ioError (mkIOError OtherError ("readProcess: " ++ cmd ++ 
+                                     ' ':unwords (map show args) ++ 
+                                     " (exit " ++ show r ++ ")")
+                                 Nothing Nothing)
+
 getRedirectorR :: T.Text -> Handler ()
 getRedirectorR t =
-    case routes $ decodePathSegments $ encodeUtf8 t of
+    case routes $ fixExtension $ decodePathSegments $ encodeUtf8 t of
         [] -> notFound
         (_, r):_ -> do
             gets <- reqGetParams `fmap` getRequest
             redirectParams RedirectPermanent r gets
+
+fixExtension :: [T.Text] -> [T.Text]
+fixExtension [t]
+    | Just t' <- T.stripSuffix ".eps" t = [t' `T.append` ".png"]
+    | Just t' <- T.stripSuffix ".svg" t = [t' `T.append` ".png"]
+fixExtension [] = []
+fixExtension (x:xs) = x : fixExtension xs
 
 getRawR :: T.Text -> Handler RepHtml
 getRawR t = do
