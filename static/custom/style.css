@@ -187,3 +187,8 @@ nav.collapse ul {
 img {
     max-width: 600px;
 }
+
+.inmydocs {
+    color: #f89d30;
+    font-style: italic;
+}

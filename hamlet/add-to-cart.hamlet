@@ -1,5 +1,5 @@
 $if inMyDocs
-    <p>In MyDocs
+    <p .inmydocs>In MyDocs
 $else
     <form method=post action=@{AddCartR $ uriPath uri}>
         <input .inner-addcart type=submit value="Add to MyDocs">

@@ -114,6 +114,9 @@ postDeletePageR ts = do
             Cms { fileStore = fs } <- getYesod
             let t = T.intercalate "/" ts
             liftIO $ fsDelete fs t
+            runDB $ do
+                fid <- getFileNameId t
+                deleteWhere [ArticleFile ==. fid]
             setMessage "Page deleted"
             runDB $ addFeedItem "Page deleted" (RedirectorR t) [] [shamlet|Page deleted: #{t}|]
             redirect RedirectTemporary RootR
