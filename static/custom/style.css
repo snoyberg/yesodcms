@@ -172,3 +172,11 @@ nav.collapse ul {
     font-style: italic;
     font-size: 0.8em;
 }
+
+.hangingleft {
+    float: left;
+}
+.hangingright {
+    display: block;
+    margin-left: 1.5em;
+}
