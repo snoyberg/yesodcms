@@ -5,7 +5,7 @@
                 <input type=search placeholder=Search name=q value=#{fromMaybe "" mquery}>
                 \ #
                 <input type=submit value=Search>
-            <h2>Refine Search
+            <h2 .refine-search>Refine Search
             $forall grouppair <- safeTail labels
                 <fieldset>
                     <legend>#{groupName $ snd $ fst grouppair}

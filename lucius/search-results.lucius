@@ -2,18 +2,12 @@
     label, span {
         margin-right: 1em;
     }
-    .button {
-        padding: 3px;
-        border: 1px groove black;
-        border-radius: 3px;
-        background-color: #eee;
-    }
     .button:hover {
-        background-color: #fee;
         cursor: pointer;
+        text-decoration: underline;
     }
     .active {
-        background-color: #eef;
+        color: #f8a23c;
     }
 }
 .ajax {

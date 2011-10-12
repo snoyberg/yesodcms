@@ -3,25 +3,14 @@
         display: table-cell;
     }
     .leftbar {
-        width: 250px;
-    }
-    .mydocs {
         width: 200px;
     }
-    .cart {
-        zoom: 0.8;
+    .mydocs {
+        width: 150px;
     }
 }
 input[type=submit] {
     display: block;
-}
-fieldset div {
-    border-top: 1px groove #ccc;
-    margin-top: 3px;
-    padding-top: 3px;
-}
-fieldset div:first-of-type {
-    border-top: 0;
 }
 fieldset {
     margin-bottom: 2em;
@@ -38,5 +27,60 @@ input.addcart {
 
 #search {
     display: table;
-    border-spacing: 1em;
+}
+
+fieldset {
+    border: 0;
+    border-bottom: 1px solid #999;
+}
+
+h2, legend {
+    color: #f8a23c;
+    font-size: 1em;
+}
+
+h2.refine-search {
+    color: #999;
+    border-bottom: 1px solid #999;
+}
+
+legend {
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.search-results legend {
+    color: #999;
+}
+.search-results legend:after {
+    content: ":";
+}
+.search-results h2 {
+    border-bottom: 1px solid #999;
+}
+label, span.name, span.button {
+    color: #114170;
+}
+p.devicegrouplabel {
+    margin: 0;
+}
+article {
+    border-left: 1px solid #999;
+    padding-left: 1em;
+}
+.leftbar, .search-results {
+    padding-right: 1em;
+}
+.mydocs {
+    table {
+        font-size: 0.8em;
+    }
+    input[type=image] {
+        width: 16px;
+    }
+}
+link > a {
+    font-size: 1.2em;
+}
+.search-results {
+    width: 100%;
 }
