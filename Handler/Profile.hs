@@ -61,7 +61,6 @@ getProfileR = do
         if userAdmin u
             then fmap Just $ runDB getLabels
             else return Nothing
-    liftIO $ print mlabels
     ((_, labelForm), _) <- runFormPost newLabelForm
     case res of
         FormSuccess u' -> do

@@ -109,7 +109,6 @@ postDeletePageR ts = do
     checkPerms ts
     ((res, widget), enctype) <- runFormPost $ renderDivs $ pure () -- Just getting a nonce...
     mconfirm <- runInputPost $ iopt textField "confirm"
-    liftIO $ print (res, mconfirm)
     case (res, mconfirm) of
         (FormSuccess (), Just{}) -> do
             Cms { fileStore = fs } <- getYesod

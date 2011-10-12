@@ -180,3 +180,5 @@ nav.collapse ul {
     display: block;
     margin-left: 1.5em;
 }
+
+/* FIXME once counts work again, turn this off*/ .count { display: none; }

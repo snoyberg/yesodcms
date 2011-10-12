@@ -69,25 +69,22 @@ verifyFile groups fnid = do
   where
     go fn [] = return $ Just fn
     go fn ((_, lids):gs) = do
-        liftIO $ putStrLn ""
-        liftIO $ print (fnid, lids)
-        x <- selectList [FileLabelFile ==. fnid] []
-        liftIO $ print x
         c <- count [FileLabelFile ==. fnid, FileLabelLabel <-. Set.toList lids]
-        liftIO $ print c
-        liftIO $ putStrLn ""
         if c == 0
             then return Nothing
             else go fn gs
 
 getSearchR :: Handler RepHtml
 getSearchR = do
+    $(logDebug) "Entering getSearchR"
     mquery <- runInputGet $ iopt textField "q"
     mres <- maybe (return Nothing) (fmap Just . liftIO . query config "yesodcms" . T.unpack) mquery
+    $(logDebug) "Finished querying Sphinx"
     gets <- fmap reqGetParams getRequest
     let checkedLabels = mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
     let isChecked = flip elem checkedLabels
     groupedCheckedLabels <- runDB $ groupLabels checkedLabels
+    $(logDebug) "Finished grouping"
     (matches, resultsInner) <-
             case mres of
                 Nothing -> return ([], [hamlet||])
@@ -97,7 +94,9 @@ getSearchR = do
                     return (ms, $(hamletFile "hamlet/search-results-inner.hamlet"))
                 Just x -> return ([], [hamlet|<p>Error running search: #{show x}|])
     let getLabelCountI :: LabelId -> Handler Int
-        getLabelCountI label = do
+        getLabelCountI _label = do
+            -- FIXME need a much more efficient algorithm
+            {-
             let cls =
                     if isChecked label
                         then checkedLabels -- FIXME remove all other labels that are in the same group
@@ -105,6 +104,8 @@ getSearchR = do
             gcls <- runDB $ groupLabels cls
             mis <- getMInfos matches gcls mquery
             return $ length mis
+            -}
+            return 0
     let getLabelCount :: LabelId -> Widget
         getLabelCount label = do
             len <- lift $ getLabelCountI label
