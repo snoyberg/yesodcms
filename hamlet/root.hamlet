@@ -31,8 +31,8 @@
                                 <div .devicegroup>
                                     $forall label <- dgLabels dg
                                         <div>
-                                            <input .hangingleft type=checkbox id=label-#{toSinglePiece $ snd label} name=labels value=#{toSinglePiece $ snd label}>
-                                            <label .hangingright for=label-#{toSinglePiece $ snd label}>#{fst label}
+                                            <input .hangingleft type=checkbox id=label-#{toSinglePiece $ liLabel $ snd label} name=labels value=#{toSinglePiece $ liLabel $ snd label}>
+                                            <label .hangingright for=label-#{toSinglePiece $ liLabel $ snd label}>#{fst label}
                         $nothing
                             $forall label <- snd grouppair
                                 <div>

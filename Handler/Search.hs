@@ -5,6 +5,7 @@ module Handler.Search
     , getLabels
     , DeviceGroup (..)
     , toDeviceGroups
+    , liLabel
     ) where
 
 import Foundation hiding (hamletFile)
@@ -16,7 +17,7 @@ import qualified Data.Text.Lazy as TL
 import FileStore
 import FormatHandler
 import Data.Maybe (catMaybes)
-import Control.Monad (forM)
+import Control.Monad (forM, when)
 import Database.Persist.Base
 import qualified Text.Search.Sphinx.ExcerptConfiguration as E
 import Data.Text.Lazy.Encoding (decodeUtf8With)
@@ -41,6 +42,7 @@ data MInfo = MInfo
     { miFile :: T.Text
     , miTitle :: T.Text
     , miExcerpt :: TL.Text
+    , miLabels :: GroupedLabels
     }
 
 safeTail :: [a] -> [a]
@@ -51,28 +53,48 @@ safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
 safeHead (x:_) = Just x
 
+data LabelInfo = LabelInfo
+    { liGroup :: GroupId
+    , liLabel :: LabelId
+    , liName :: T.Text
+    }
+    deriving Show
+instance Eq LabelInfo where
+    a == b = liLabel a == liLabel b
+instance Ord LabelInfo where
+    compare a b = compare (liLabel a) (liLabel b)
+
+type GroupedLabels = Map.Map GroupId (Set.Set LabelInfo)
+
 -- | Convert a raw list of labels into a map grouped by the label group.
-groupLabels :: [LabelId] -> YesodDB Cms Cms (Map.Map GroupId (Set.Set LabelId))
-groupLabels = fmap (Map.unionsWith Set.union) . mapM (\lid -> do
+groupLabels :: [LabelInfo] -> GroupedLabels
+groupLabels = Map.unionsWith Set.union . map (\li -> Map.singleton (liGroup li) $ Set.singleton li)
+
+-- | Determine the label count for the set of MInfos.
+getLabelCountI :: [MInfo]
+               -> GroupedLabels  -- ^ already selected labels
+               -> LabelInfo -- ^ what we're getting the count for
+               -> Int
+getLabelCountI minfos checked li =
+    length $ filter (isIncluded checked') minfos
+  where
+    checked' = Map.insert (liGroup li) (Set.singleton li) checked
+
+isIncluded :: GroupedLabels -> MInfo -> Bool
+isIncluded groups mi =
+    all go $ Map.toList groups
+  where
+    go (gid, lis) =
+        case Map.lookup gid $ miLabels mi of
+            Nothing -> False
+            Just lis' -> not $ Set.null $ Set.intersection lis lis'
+
+toLabelInfo :: LabelId -> YesodDB sub Cms (Maybe LabelInfo)
+toLabelInfo lid = do
     ml <- get lid
     case ml of
-        Nothing -> return Map.empty
-        Just l -> return $ Map.singleton (labelGroup l) (Set.singleton lid))
-
--- | Ensure that the file in question exists and fulfills the filter.
-verifyFile :: Map.Map GroupId (Set.Set LabelId) -> FileNameId -> YesodDB Cms Cms (Maybe FileName)
-verifyFile groups fnid = do
-    mfn <- get fnid
-    case mfn of
         Nothing -> return Nothing
-        Just fn -> go fn $ Map.toList groups
-  where
-    go fn [] = return $ Just fn
-    go fn ((_, lids):gs) = do
-        c <- count [FileLabelFile ==. fnid, FileLabelLabel <-. Set.toList lids]
-        if c == 0
-            then return Nothing
-            else go fn gs
+        Just l -> return $ Just $ LabelInfo (labelGroup l) lid (labelName l)
 
 getSearchR :: Handler RepHtml
 getSearchR = do
@@ -81,34 +103,23 @@ getSearchR = do
     mres <- maybe (return Nothing) (fmap Just . liftIO . query config "yesodcms" . T.unpack) mquery
     $(logDebug) "Finished querying Sphinx"
     gets <- fmap reqGetParams getRequest
-    let checkedLabels = mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
-    let isChecked = flip elem checkedLabels
-    groupedCheckedLabels <- runDB $ groupLabels checkedLabels
+    checkedLabels <- runDB $ fmap catMaybes $ mapM toLabelInfo $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
+    let isChecked :: LabelId -> Bool
+        isChecked = flip elem (map liLabel checkedLabels)
+    let groupedCheckedLabels = groupLabels checkedLabels
     $(logDebug) "Finished grouping"
-    (matches, resultsInner) <-
+    (matches, resultsInner, misAll) <-
             case mres of
-                Nothing -> return ([], [hamlet||])
+                Nothing -> return ([], [hamlet||], [])
                 Just (S.Ok qr) -> do
                     let ms = S.matches qr
-                    mis <- getMInfos ms groupedCheckedLabels mquery
-                    return (ms, $(hamletFile "hamlet/search-results-inner.hamlet"))
-                Just x -> return ([], [hamlet|<p>Error running search: #{show x}|])
-    let getLabelCountI :: LabelId -> Handler Int
-        getLabelCountI _label = do
-            -- FIXME need a much more efficient algorithm
-            {-
-            let cls =
-                    if isChecked label
-                        then checkedLabels -- FIXME remove all other labels that are in the same group
-                        else label : checkedLabels
-            gcls <- runDB $ groupLabels cls
-            mis <- getMInfos matches gcls mquery
-            return $ length mis
-            -}
-            return 0
-    let getLabelCount :: LabelId -> Widget
+                    misAll <- runDB $ getMInfos ms mquery
+                    let mis = filter (isIncluded groupedCheckedLabels) misAll
+                    return (ms, $(hamletFile "hamlet/search-results-inner.hamlet"), misAll)
+                Just x -> return ([], [hamlet|<p>Error running search: #{show x}|], [])
+    let getLabelCount :: LabelInfo -> Widget
         getLabelCount label = do
-            len <- lift $ getLabelCountI label
+            let len = getLabelCountI misAll groupedCheckedLabels label
             [whamlet|#{show len}|]
     isRaw <- runInputGet $ iopt boolField "raw"
     case isRaw of
@@ -116,15 +127,18 @@ getSearchR = do
             r <- getUrlRenderParams
             let str = TL.toStrict $ renderHtml $ resultsInner r
             labels <- runDB $ selectList [] []
-            withCnt <- flip mapM labels $ \(label, _) -> do
-                i <- getLabelCountI label
-                return (toSinglePiece label, A.String $ T.pack $ show i)
+            withCnt <- flip mapM labels $ \(lid, l) -> do
+                let li = LabelInfo (labelGroup l) lid (labelName l)
+                let i = getLabelCountI misAll groupedCheckedLabels li
+                when (liName li `elem` ["AMS", "DeltaV", "Foundation Fieldbus", "HART"]) $ liftIO $ print (liName li, i)
+                return (toSinglePiece lid, A.String $ T.pack $ show i)
             sendResponse $ RepJson $ toContent $ A.Object $ Map.fromList
                 [ ("content", A.String str)
                 , ("counts", A.Object $ Map.fromList withCnt)
                 ]
         _ -> do
-            labels <- runDB getLabels
+            labels <- runDB getLabels :: Handler [((GroupId, Group), [(LabelId, Label)])]
+            labelInfos <- runDB $ selectList [] [] >>= mapM (\(lid, l) -> return $ LabelInfo (labelGroup l) lid (labelName l))
             let results = $(widgetFile "search-results")
             mcartTable <- do
                 muid <- maybeAuthId
@@ -209,10 +223,10 @@ getSearchXmlpipeR = do
                                 update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
                                 return [(fid, T.concat [title, " ", text])]
 
-getMInfos :: [S.Match] -> Map.Map GroupId (Set.Set LabelId) -> Maybe T.Text -> Handler [MInfo]
-getMInfos matches groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
+getMInfos :: [S.Match] -> Maybe T.Text -> YesodDB sub Cms [MInfo]
+getMInfos matches mquery = fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
     let fid = Key $ PersistInt64 did
-    mf <- verifyFile groupedCheckedLabels fid
+    mf <- get fid
     case mf of
         Just FileName
             { fileNameTitle = Just title
@@ -225,18 +239,20 @@ getMInfos matches groupedCheckedLabels mquery = runDB $ fmap catMaybes $ forM ma
                     escape c = T.singleton c
                 rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack $ fromMaybe "" mquery
                 case rexcerpt of
-                    S.Ok bss ->
+                    S.Ok bss -> do
+                        labels <- selectList [FileLabelFile ==. fid] [] >>= mapM (toLabelInfo . fileLabelLabel . snd)
                         return $ Just MInfo
                             { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
                             , miTitle = title
                             , miExcerpt = TL.concat $ map (decodeUtf8With ignore) bss
+                            , miLabels = groupLabels $ catMaybes labels
                             }
                     _ -> return Nothing
         _ -> return Nothing
 
 data DeviceGroup = DeviceGroup
     { dgName :: T.Text
-    , dgLabels :: [(T.Text, LabelId)]
+    , dgLabels :: [(T.Text, LabelInfo)]
     }
 
 toDeviceGroups :: [(LabelId, Label)] -> Maybe [DeviceGroup]
@@ -251,4 +267,4 @@ toDeviceGroups orig = do
             y = T.strip $ T.drop 1 y'
         if T.null x || T.null y
             then Nothing
-            else Just $ Map.singleton x $ Map.singleton y lid
+            else Just $ Map.singleton x $ Map.singleton y $ LabelInfo (labelGroup l) lid (labelName l)

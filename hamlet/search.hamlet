@@ -16,8 +16,8 @@
                             <div .devicegroup>
                                 $forall label <- dgLabels dg
                                     <div>
-                                        <input .hangingleft type=checkbox id=label-#{toSinglePiece $ snd label} name=labels value=#{toSinglePiece $ snd label} :isChecked $ snd label:checked>
-                                        <label .hangingright for=label-#{toSinglePiece $ snd label}>
+                                        <input .hangingleft type=checkbox id=label-#{toSinglePiece $ liLabel $ snd label} name=labels value=#{toSinglePiece $ liLabel $ snd label} :isChecked $ liLabel $ snd label:checked>
+                                        <label .hangingright for=label-#{toSinglePiece $ liLabel $ snd label}>
                                             \#{fst label}
                                             <span .count>
                                                 (^{getLabelCount $ snd label})
@@ -28,7 +28,7 @@
                                 <label .hangingright for=label-#{toSinglePiece $ fst label}>
                                     \#{labelName $ snd label}
                                     <span .count>
-                                        (^{getLabelCount $ fst label})
+                                        (^{getLabelCount $ LabelInfo (fst $ fst grouppair) (fst label) (labelName $ snd label)})
             <input .refine type=submit value="Refine Search">
     ^{results}
     $maybe cartTable <- mcartTable

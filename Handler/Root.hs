@@ -11,7 +11,7 @@ module Handler.Root
     ) where
 
 import Foundation
-import Handler.Search (getLabels, DeviceGroup (..), toDeviceGroups)
+import Handler.Search (getLabels, DeviceGroup (..), toDeviceGroups, liLabel)
 import Yesod.Auth (apLogin)
 import Data.Text (Text)
 import FormatHandler.Html (alohaHtmlField)

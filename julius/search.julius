@@ -68,7 +68,7 @@ function loadForm() {
     $.getJSON("@{SearchR}?raw=yes&" + $("#search").serialize(), function(x){
         $("#results-inner").html(x.content);
         for (k in x.counts) {
-            $("label[for=label-" + k + "]").next().text("(" + x.counts[k] + ")");
+            $("label[for=label-" + k + "] span.count").text("(" + x.counts[k] + ")");
         }
         loadGroupCounts();
     });
