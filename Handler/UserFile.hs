@@ -43,6 +43,7 @@ import System.IO.Error
 import Control.Concurrent.MVar
 import Control.Concurrent
 import GHC.IO.Exception (IOErrorType(..))
+import Data.List (sort)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
@@ -68,8 +69,8 @@ getUserFileR user ts = do
     case menum of
         Nothing -> do
             contents <- liftIO $ fsList fs t
-            let folders = map fst $ filter snd contents
-            let files = map fst $ filter (not . snd) contents
+            let folders = sort $ map fst $ filter snd contents
+            let files = sort $ map fst $ filter (not . snd) contents
             let link x = UserFileR user $ ts ++ [x]
                 editLink x = EditPageR $ ts' ++ [x]
                 isEditable x = isJust $ findHandler (snd $ T.breakOnEnd "." x) fhs
