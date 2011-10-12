@@ -294,6 +294,7 @@ instance YesodBreadcrumbs Cms where
     breadcrumb UpGroupR{} = return ("", Nothing)
     breadcrumb DownGroupR{} = return ("", Nothing)
     breadcrumb LabelsR{} = return ("", Nothing)
+    breadcrumb LabelsCsvR{} = return ("", Nothing)
     breadcrumb DeleteLabelR{} = return ("", Nothing)
     breadcrumb FileLabelsR{} = return ("", Nothing)
     breadcrumb LabelListR{} = return ("", Nothing)

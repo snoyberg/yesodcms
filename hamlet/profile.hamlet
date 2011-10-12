@@ -53,3 +53,9 @@ $maybe alllabels <- mlabels
     <p>
         <form method=post action=@{LabelsR}>
             ^{labelForm}
+    <form method=post action=@{LabelsCsvR} enctype=multipart/form-data>
+        <p>
+            CSV file: #
+            <input type=file name=csv>
+            \ #
+            <input type=submit value=Upload>

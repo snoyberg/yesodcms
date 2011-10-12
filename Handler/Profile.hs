@@ -9,6 +9,7 @@ module Handler.Profile
     , postDeleteGroupR
 
     , postLabelsR
+    , postLabelsCsvR
     , postDeleteLabelR
 
     , getLabels
@@ -18,9 +19,11 @@ import Foundation
 import Control.Applicative ((<$>), (<*>), pure)
 import qualified Data.Text as T
 import Data.Monoid (mempty)
-import Control.Monad (unless)
+import Control.Monad (unless, forM_)
 import Database.Persist.Join hiding (runJoin)
 import Database.Persist.Join.Sql (runJoin)
+import Text.CSV
+import qualified Data.ByteString.Lazy.Char8 as L8
 
 form :: UserId -> User -> Html -> Form Cms Cms (FormResult User, Widget)
 form uid user = renderTable $ User
@@ -122,6 +125,23 @@ postLabelsR = do
                 Left{} -> setMessage "Label already exists"
                 Right{} -> setMessage "New label created"
         _ -> setMessage "Invalid entry"
+    redirect RedirectTemporary ProfileR
+
+postLabelsCsvR :: Handler ()
+postLabelsCsvR = do
+    requireAdmin
+    (_, files) <- runRequestBody
+    csvFile <- maybe (invalidArgs ["No file uploaded" :: T.Text]) return $ lookup "csv" files
+    records <- either (invalidArgs . return . T.pack . show) return $ parseCSV "" $ L8.unpack $ fileContent csvFile
+    runDB $ forM_ records $ \r ->
+        case r of
+            [g, l] -> do
+                gid <- fmap (either fst id) $ insertBy $ Group (T.pack g) 100000
+                fixGroups
+                _ <- insertBy $ Label gid $ T.pack l
+                return ()
+            _ -> return ()
+    setMessage "Groups and labels added"
     redirect RedirectTemporary ProfileR
 
 postDeleteLabelR :: LabelId -> Handler ()
