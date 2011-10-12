@@ -140,6 +140,7 @@ getSearchR = do
             defaultLayout $ do
                 $(widgetFile "search-device-groups")
                 $(widgetFile "search")
+                $(widgetFile "comments")
   where
     config = defaultConfig
         { port = 9312

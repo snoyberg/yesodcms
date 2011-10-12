@@ -1,7 +1,12 @@
 $(function(){
     if($("article#blogpost").length) return; // no comments on blog posts
-    $.each($(".hascomments[id]"), function(i, e){
+    addComments();
+});
+
+function addComments() {
+    $.each($(".hascomments[id]").not(".comments-added"), function(i, e){
         var x = $(e);
+        x.addClass("comments-added");
 
         // Add the paragraph links
         x.before("<div class='paragraph-link'><a href='#" + x.attr("id") + "'>&#x00B6;</a></div>");
@@ -48,4 +53,4 @@ $(function(){
             if (document.location.hash == "#" + x.attr("id")) open();
         });
     });
-});
+}

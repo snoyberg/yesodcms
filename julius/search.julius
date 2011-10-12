@@ -8,6 +8,7 @@ $(function(){
         } else {
             $gramps.append("<div class='ajax'/>").children("div.ajax").load($this.attr("data-raw"), function(){
                 $(".inner-addcart").detach();
+                addComments();
             });
         }
         return false;
