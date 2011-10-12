@@ -68,7 +68,10 @@ article {
 }
 
 .cart table {
-    zoom: 0.6;
+    font-size: 0.8em;
+}
+.cart input[type=image] {
+    width: 16px;
 }
 
 .search h2 {

@@ -181,4 +181,8 @@ nav.collapse ul {
     margin-left: 1.5em;
 }
 
+img {
+    max-width: 600px;
+}
+
 /* FIXME once counts work again, turn this off*/ .count { display: none; }
