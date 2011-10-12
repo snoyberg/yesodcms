@@ -19,6 +19,8 @@ import DITA.Output.HTML (renderTopicTree, hsClassMap, hsGoElem, HtmlSettings, re
 import DITA.Util.Render
 import DITA.Util.ClassMap (ClassMap)
 import Text.XML
+import qualified Text.XML.Stream.Parse as P
+import Data.XML.Types (Event (EventContent, EventBeginElement, EventEndElement), Content (ContentText))
 import Text.XML.Xml2Html ()
 import qualified Data.Text.Lazy as TL
 import Control.Monad.Trans.State (evalState, get, put)
@@ -35,16 +37,19 @@ import Control.Monad.Trans.Class (lift)
 import Data.Maybe (listToMaybe, maybeToList)
 import Text.Blaze (toHtml, Html)
 import Text.Hamlet.XML (xml)
+import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Map as Map
 import Data.Enumerator (Enumerator)
+import qualified Data.Enumerator as E
+import qualified Data.Enumerator.List as EL
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as L
 import qualified DITA.Types as D
 import Data.IORef
-import Network.URI.Enumerator (URI)
+import Network.URI.Enumerator (URI, readURI)
 import qualified Network.HTTP.Types as H
 import Blaze.ByteString.Builder.Char.Utf8 (fromChar, fromText)
-import Data.Monoid (mconcat)
+import Data.Monoid (mconcat, mempty, mappend)
 import Data.Text.Encoding (decodeUtf8)
 import Blaze.ByteString.Builder (toByteString, fromByteString)
 import Network.Wai (rawQueryString, rawPathInfo)
@@ -61,6 +66,10 @@ import qualified Text.Highlighting.Illuminate.XML as XML
 import qualified Text.Highlighting.Illuminate.Sh as Sh
 import qualified Text.XHtml
 
+data GetTitleState = GTSDone T.Text
+                   | GTSNothing
+                   | GTSFilling TB.Builder
+
 ditaFormatHandler :: (Href -> T.Text)
                   -> DTDCache
                   -> ClassMap
@@ -74,10 +83,13 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     , fhFlatWidget = widget
     , fhFilter = xmlFilter
     , fhRefersTo = const $ const $ return []
-    , fhTitle = \sm uri -> fmap (either (const Nothing) id) $ runDITA (ditaSettings sm) $ do
+    , fhTitle = fastTitle {-\sm uri -> fmap (either (const Nothing) id) $ runDITA (ditaSettings sm) $ do
         tts <- loadTopicTrees uri
-        return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts
-    , fhToText = \sm uri -> fmap (either (const Nothing) (Just . plain)) $ runDITA (ditaSettings sm) $ loadTopicTrees uri
+        return $ fmap (text . topicTitle . ttTopic) $ listToMaybe tts-}
+    , fhToText = \sm uri ->
+        if False
+            then fmap (either (const Nothing) (Just . plain)) $ runDITA (ditaSettings sm) $ loadTopicTrees uri -- more correct
+            else fmap (either (const Nothing) (Just . TL.toStrict . TB.toLazyText)) $ E.run $ readURI sm uri E.$$ P.parseBytes P.def E.=$ EL.fold plainEvent mempty
     , fhExtraParents = \_ _ -> return []
     }
   where
@@ -88,6 +100,23 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
         , dsStrict = False
         , dsDitaval = def
         }
+    plainEvent :: TB.Builder -> Event -> TB.Builder
+    plainEvent b (EventContent (ContentText t)) = b `mappend` TB.fromText t
+    plainEvent b _ = b
+
+    fastTitle sm uri =
+        fmap (either (const Nothing) (Just . fromGTS)) $ E.run $ readURI sm uri E.$$ P.parseBytes P.def E.=$ EL.fold getTitle GTSNothing
+
+    getTitle :: GetTitleState -> Event -> GetTitleState
+    getTitle (GTSFilling b) (EventContent (ContentText t)) = GTSFilling $ b `mappend` TB.fromText t
+    getTitle (GTSFilling b) (EventEndElement "title") = GTSDone $ TL.toStrict $ TB.toLazyText b
+    getTitle GTSNothing (EventBeginElement "title" _) = GTSFilling mempty
+    getTitle a _ = a
+
+    fromGTS :: GetTitleState -> T.Text
+    fromGTS (GTSDone t) = t
+    fromGTS _ = "Untitled Topic"
+
     -- Convert a list of topic trees to plain text, used for the search index
     plain :: [D.TopicTree] -> T.Text
     plain = T.concat . concatMap plainTT
