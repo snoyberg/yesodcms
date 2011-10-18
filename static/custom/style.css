@@ -3,6 +3,7 @@ body {
     width: 980px;
     margin: 1em auto;
     padding: 5px;
+    font-size: 0.75em;
 }
 #topbar {
     display: table;

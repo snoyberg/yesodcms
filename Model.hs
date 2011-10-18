@@ -48,7 +48,7 @@ getFileNameId t =
     fmap (either fst id) $ insertBy $ FileName (T.append "fs:" $ fromMaybe t $ T.stripPrefix "fs:" t) Nothing Nothing
 
 getFileNameIdURI :: (PersistBackend b m, Functor (b m)) => URI -> b m (Key b (FileNameGeneric backend))
-getFileNameIdURI = getFileNameId . uriPath
+getFileNameIdURI = getFileNameId . T.replace "%20" " " . uriPath
 
 addLabel :: (PersistBackend b m, Functor (b m)) => Key b FileName -> T.Text -> b m ()
 addLabel fid name = do

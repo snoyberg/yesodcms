@@ -2,6 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PatternGuards #-}
 module FormatHandler.Html
     ( htmlFormatHandler
     , YesodAloha (..)
@@ -34,6 +35,7 @@ import Control.Arrow ((***))
 import Control.Applicative ((<$>), (<*>))
 import Text.Blaze (Html)
 import Network.URI.Enumerator
+import Control.Monad.Trans.State (runState, get, put)
 
 splitTitle :: T.Text -> (Maybe T.Text, T.Text)
 splitTitle t =
@@ -97,13 +99,48 @@ $if not $ null youtubes
     hrefs' (TagOpen "a" as) = lookup "href" as
     hrefs' _ = Nothing
 
+addIds :: T.Text -> T.Text
+addIds text = fst $ flip runState (Set.empty, 1 :: Int) $ do
+    tags <- mapM removeDupes $ parseTags text
+    tags' <- mapM addMissing tags
+    return $ renderTags $ map addHasComments tags'
+  where
+    removeDupes t@(TagOpen name attrs) =
+        case lookup "id" attrs of
+            Nothing -> return t
+            Just i -> do
+                (ids, num) <- get
+                if i `Set.member` ids
+                    then return $ TagOpen name $ filter (\(x, _) -> x /= "id") attrs
+                    else do
+                        put (Set.insert i ids, num)
+                        return t
+    removeDupes t = return t
+    addMissing t@(TagOpen name attrs) =
+        case lookup "id" attrs of
+            Just{} -> return t
+            Nothing -> do
+                i <- getNext
+                return $ TagOpen name $ ("id", i) : attrs
+    addMissing t = return t
+    getNext = do
+        (ids, num) <- get
+        let i = "x-" `T.append` T.pack (show num)
+        put (Set.insert i ids, num + 1)
+        if i `Set.member` ids
+            then getNext
+            else return i
+    addHasComments (TagOpen "p" attrs)
+        | Nothing <- lookup "class" attrs = TagOpen "p" $ ("class", "hascomments") : attrs
+    addHasComments t = t
+
 class YesodAloha a where
     urlAloha :: a -> [Either (Route a) T.Text]
     urlUpload :: a -> Route a
 
 alohaHtmlField :: (YesodAloha master, YesodJquery master) => Field sub master T.Text
 alohaHtmlField = Field
-    { fieldParse = return . Right . fmap sanitizeBalance . listToMaybe
+    { fieldParse = return . Right . fmap (addIds . sanitizeBalance) . listToMaybe
     , fieldView = \theId name val _isReq -> do
         y <- lift getYesod
         addScriptEither $ urlJqueryJs y

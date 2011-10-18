@@ -21,6 +21,7 @@ getWikiR pieces = do
         Just (fh, ext, uri) -> do
             let widget = fhWidget fh (fsSM fs) uri
             mtitle <- liftIO $ fhTitle fh (fsSM fs) uri
+            mu <- maybeAuth
             defaultLayout $ do
                 maybe (return ()) (setTitle . toHtml) mtitle
                 $(widgetFile "show-wiki-page")

@@ -31,27 +31,30 @@ import Control.Applicative (pure)
 import Text.CSV
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
+import Database.Persist.Base (PersistFilter (BackendSpecificFilter))
 
-checkPerms :: [T.Text] -> Handler ()
-checkPerms ts = do
+checkPerms :: Bool -> [T.Text] -> Handler ()
+checkPerms isDelete ts = do
     u <- requireAuth
-    checkPerms' u ts
+    checkPerms' isDelete u ts
 
-checkPerms' :: Monad m => (UserId, User) -> [T.Text] -> GGHandler sub Cms m ()
-checkPerms' _ [] = permissionDenied "Cannot edit page"
-checkPerms' _ ("wiki":_) = return ()
-checkPerms' (_, u) ("page":_) =
+checkPerms' :: Monad m => Bool -> (UserId, User) -> [T.Text] -> GGHandler sub Cms m ()
+checkPerms' _ _ [] = permissionDenied "Cannot edit page"
+checkPerms' _isDelete (_, _u) ("wiki":_) =
+    return ()
+    --when (isDelete && not (userAdmin u)) $ permissionDenied "Only admins can delete this page"
+checkPerms' _ (_, u) ("page":_) =
     unless (userAdmin u) $ permissionDenied "Only admins can edit this page"
-checkPerms' (uid, _) ("home":user:_) = do
+checkPerms' _ (uid, _) ("home":user:_) = do
     unless (toSinglePiece uid == user) $ permissionDenied "You do not own this page"
-checkPerms' _ _ = permissionDenied "Path not understood"
+checkPerms' _ _ _ = permissionDenied "Path not understood"
 
-checkURIPerms :: Monad m => (UserId, User) -> URI -> GGHandler sub Cms m ()
-checkURIPerms u uri = checkPerms' u $ T.splitOn "/" $ uriPath uri
+checkURIPerms :: Monad m => Bool -> (UserId, User) -> URI -> GGHandler sub Cms m ()
+checkURIPerms isDelete u uri = checkPerms' isDelete u $ T.splitOn "/" $ uriPath uri
 
 getEditPageR :: [T.Text] -> Handler RepHtml
 getEditPageR ts = do
-    checkPerms ts
+    checkPerms False ts
     let ext = snd $ T.breakOnEnd "." $ safeLast "" ts
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     fh <- maybe (invalidArgs ["Invalid file extension: " `T.append` ext]) return $ findHandler ext fhs
@@ -77,6 +80,8 @@ getEditPageR ts = do
     let isChecked = flip elem myLabels
     isLabels' <- runInputGet $ iopt boolField "labels"
     let isLabels = fromMaybe False isLabels'
+    mu <- maybeAuth
+    let isAdmin = fmap (userAdmin . snd) mu == Just True
     defaultLayout $(widgetFile "edit-page")
   where
     isSucc FormSuccess{} = True
@@ -97,7 +102,7 @@ safeInit x = init x
 
 postEditPageR :: [T.Text] -> Handler RepHtml
 postEditPageR ts = do
-    checkPerms ts
+    checkPerms False ts
     toDelete <- runInputPost $ iopt textField "delete"
     case toDelete of
         Just{} -> redirect RedirectTemporary $ DeletePageR ts
@@ -106,7 +111,7 @@ postEditPageR ts = do
 getDeletePageR, postDeletePageR :: [T.Text] -> Handler RepHtml
 getDeletePageR = postDeletePageR
 postDeletePageR ts = do
-    checkPerms ts
+    checkPerms True ts
     ((res, widget), enctype) <- runFormPost $ renderDivs $ pure () -- Just getting a nonce...
     mconfirm <- runInputPost $ iopt textField "confirm"
     case (res, mconfirm) of
@@ -149,7 +154,7 @@ setCanons t = do
 
 postFileLabelsR :: [T.Text] -> Handler ()
 postFileLabelsR ts = do
-    checkPerms ts
+    checkPerms False ts
     let t = T.intercalate "/" ts
     fid <- runDB $ getFileNameId t
     (posts, _) <- runRequestBody
@@ -163,7 +168,7 @@ postFileLabelsR ts = do
 
 getLabelListR :: [T.Text] -> Handler (ContentType, Content)
 getLabelListR ts = do
-    checkPerms ts
+    checkPerms False ts
     let t = T.intercalate "/" ts
     let ext = snd $ T.breakOnEnd "." t
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
@@ -190,20 +195,29 @@ postLabelListR ts = do
     let toMap = Map.fromList . zip frow
     let maps = map toMap rest
     runDB $ forM_ maps $ \m -> do
-        uriT <- maybe (lift $ invalidArgs ["No URI"]) (return . T.pack) $ Map.lookup "URI" m
+        uriT' <- maybe (lift $ invalidArgs ["No URI"]) (return . T.pack) $ Map.lookup "URI" m
+        let escapeSpace ' ' = "%20"
+            escapeSpace c = T.singleton c
+        let uriT = T.concatMap escapeSpace uriT'
         case parseURI uriT of
             Nothing -> return ()
             Just uri -> do
-                lift $ checkURIPerms user uri
+                lift $ checkURIPerms False user uri
                 forM_ (Map.toList m) $ \(k, v) -> do
                     mg <- getBy $ UniqueGroup $ T.pack k
                     fid <- getFileNameIdURI uri
                     case mg of
                         Nothing -> return ()
                         Just (gid, _) -> do
-                            ml <- getBy $ UniqueLabel gid $ T.pack v
-                            case ml of
-                                Nothing -> return ()
-                                Just (lid, _) -> insertBy (FileLabel fid lid) >> return ()
+                            ls <- selectList [LabelGroup ==. gid, LabelName `like` addPercent (T.pack v)] []
+                            forM_ ls $ \(lid, _) -> insertBy (FileLabel fid lid) >> return ()
     setMessage "Labels applied"
     redirect RedirectTemporary $ EditPageR ts
+
+like :: PersistField typ => EntityField v typ -> typ -> Filter v
+like f a = Filter f (Left a) (BackendSpecificFilter " LIKE ")
+
+addPercent :: T.Text -> T.Text
+addPercent t
+    | T.null t = t
+    | otherwise = T.snoc t '%'

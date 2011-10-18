@@ -48,6 +48,8 @@ data ArticleInfo = ArticleInfo
 
 getArticleInfo :: Article -> YesodDB Cms Cms ArticleInfo
 getArticleInfo a = do
+    cr <- lift getCurrentRoute
+    let isHome = cr == Just RootR
     u <- get404 $ articleUser a
     lids <- fmap (map $ fileLabelLabel . snd) $ selectList [FileLabelFile ==. articleFile a] []
     labels <- mapM get404 lids
@@ -55,10 +57,15 @@ getArticleInfo a = do
         { aiTitle = articleTitle a
         , aiLink = WikiR [articleName a]
         , aiUser = fromMaybe (userHandle u) (userName u)
-        , aiLabels = T.intercalate "; " $ map labelName labels
+        , aiLabels = T.intercalate "; " $ (if isHome then ellipsis 4 else id) $ map labelName labels
         , aiTimestamp = prettyDateTime $ articleAdded a
         , aiLids = lids
         }
+
+ellipsis :: Int -> [Text] -> [Text]
+ellipsis _ [] = []
+ellipsis 0 _ = ["..."]
+ellipsis i (x:xs) = x : ellipsis (i - 1) xs
 
 addArticleForm :: Html -> Form Cms Cms (FormResult (Text, Text), Widget)
 addArticleForm html = do
