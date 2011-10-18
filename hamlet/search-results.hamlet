@@ -1,4 +1,8 @@
 <article .search-results>
+    <form .minisearch>
+        <input type=search placeholder=Search name=q value=#{fromMaybe "" mquery}>
+        \ #
+        <input type=image value=Go src=@{StaticR custom_search_submit_png}>
     <h2>Results
     $maybe grouppair <- safeHead labels
         <fieldset .top-filter>

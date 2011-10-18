@@ -108,3 +108,18 @@ input[type=checkbox] {
 .devicegrouplabel {
     margin: 0;
 }
+
+/* iPhone */
+@media (max-width: 500px) {
+    .posts, .create, .cart {
+        display: none;
+    }
+    .search {
+        width: 100%;
+        border-right: 0;
+        display: block;
+    }
+    article {
+        display: block;
+    }
+}

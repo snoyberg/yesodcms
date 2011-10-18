@@ -9,6 +9,24 @@
         width: 150px;
     }
 }
+
+.minisearch {
+    display: none;
+}
+
+/* iPhone */
+@media (max-width: 500px) {
+    .leftbar, .mydocs, .top-filter {
+        display: none;
+    }
+    article.search-results {
+        border-left: 0;
+    }
+    .minisearch {
+        display: block;
+    }
+}
+
 input[type=submit] {
     display: block;
 }
