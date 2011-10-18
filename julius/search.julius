@@ -1,18 +1,6 @@
 $(function(){
-    $("a[data-raw]").live("click", function(){
-        var $this = $(this);
-        var $gramps = $this.parent().parent();
-        var $ajax = $gramps.children("div.ajax");
-        if ($ajax.length) {
-            $ajax.toggleClass("hidden");
-        } else {
-            $gramps.append("<div class='ajax'/>").children("div.ajax").load($this.attr("data-raw"), function(){
-                $(".inner-addcart").detach();
-                addComments();
-            });
-        }
-        return false;
-    });
+    $("a[data-raw]").live("click", function(){openAjax($(this));return false;});
+    $("input.add-comment-submit").live("click", addCommentSubmit);
     $("a.close").live("click", function(){
         $(this).parent().parent().toggleClass("hidden");
     });
@@ -31,7 +19,6 @@ $(function(){
         loadForm();
     });
 
-    $("fieldset.top-filter > input").hide().addClass("buttonbox");
     $("fieldset.top-filter > legend").after("<span id='all'>All</span>");
     $("fieldset.top-filter > label, fieldset.top-filter > span").addClass("button");
     $("#all").click(function(){
@@ -72,4 +59,27 @@ function loadForm() {
         }
         loadGroupCounts();
     });
+}
+
+function addCommentSubmit() {
+    var form = $(this).parent();
+    $.post(form.attr("action"), form.serialize(), function(){
+        var link = form.parents(".result").find("a[data-raw]");
+        form.parents(".ajax").detach();
+        openAjax(link);
+    });
+    return false;
+}
+
+function openAjax($this) {
+    var $gramps = $this.parent().parent();
+    var $ajax = $gramps.children("div.ajax");
+    if ($ajax.length) {
+        $ajax.toggleClass("hidden");
+    } else {
+        $gramps.append("<div class='ajax'/>").children("div.ajax").load($this.attr("data-raw"), function(){
+            $(".inner-addcart").detach();
+            addComments();
+        });
+    }
 }

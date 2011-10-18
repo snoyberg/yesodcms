@@ -1,11 +1,15 @@
-<form #search method=get>
-    <nav .leftbar>
+<nav .leftbar>
+    <form #search method=get>
             <h2>Search
             <p>
                 <input type=search placeholder=Search name=q value=#{fromMaybe "" mquery}>
                 \ #
                 <input type=submit value=Search>
             <h2 .refine-search>Refine Search
+            <div style=display:none>
+                $maybe grouppair <- safeHead labels
+                    $forall label <- snd grouppair
+                        <input .buttonbox type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
             $forall grouppair <- safeTail labels
                 <fieldset>
                     <legend>#{groupName $ snd $ fst grouppair}
@@ -30,8 +34,8 @@
                                     <span .count>
                                         (^{getLabelCount $ LabelInfo (fst $ fst grouppair) (fst label) (labelName $ snd label)})
             <input .refine type=submit value="Refine Search">
-    ^{results}
-    $maybe cartTable <- mcartTable
-        <article .mydocs>
-            <h2>MyDocs
-            ^{cartTable}
+^{results}
+$maybe cartTable <- mcartTable
+    <article .mydocs>
+        <h2>MyDocs
+        ^{cartTable}

@@ -4,8 +4,6 @@
         <fieldset .top-filter>
             <legend>#{groupName $ snd $ fst grouppair}
             $forall label <- snd grouppair
-                <input type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
                 <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
-            <input .refine type=submit value="Refine Search">
     <div #results-inner>
         ^{toWidget resultsInner}

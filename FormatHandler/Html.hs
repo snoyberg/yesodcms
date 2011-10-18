@@ -23,7 +23,7 @@ import Text.Lucius (lucius)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
 import Text.Hamlet (shamlet)
-import Data.Maybe (listToMaybe, mapMaybe, fromMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
 import Text.Blaze (preEscapedText)
 import qualified Data.Set as Set
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -35,7 +35,8 @@ import Control.Arrow ((***))
 import Control.Applicative ((<$>), (<*>))
 import Text.Blaze (Html)
 import Network.URI.Enumerator
-import Control.Monad.Trans.State (runState, get, put)
+import System.Random.Mersenne (randomIO)
+import Data.Word (Word)
 
 splitTitle :: T.Text -> (Maybe T.Text, T.Text)
 splitTitle t =
@@ -99,23 +100,11 @@ $if not $ null youtubes
     hrefs' (TagOpen "a" as) = lookup "href" as
     hrefs' _ = Nothing
 
-addIds :: T.Text -> T.Text
-addIds text = fst $ flip runState (Set.empty, 1 :: Int) $ do
-    tags <- mapM removeDupes $ parseTags text
-    tags' <- mapM addMissing tags
-    return $ renderTags $ map addHasComments tags'
+addIds :: T.Text -> IO T.Text
+addIds text = do
+    tags <- mapM addMissing $ parseTags text
+    return $ renderTags $ map addHasComments tags
   where
-    removeDupes t@(TagOpen name attrs) =
-        case lookup "id" attrs of
-            Nothing -> return t
-            Just i -> do
-                (ids, num) <- get
-                if i `Set.member` ids
-                    then return $ TagOpen name $ filter (\(x, _) -> x /= "id") attrs
-                    else do
-                        put (Set.insert i ids, num)
-                        return t
-    removeDupes t = return t
     addMissing t@(TagOpen name attrs) =
         case lookup "id" attrs of
             Just{} -> return t
@@ -124,12 +113,8 @@ addIds text = fst $ flip runState (Set.empty, 1 :: Int) $ do
                 return $ TagOpen name $ ("id", i) : attrs
     addMissing t = return t
     getNext = do
-        (ids, num) <- get
-        let i = "x-" `T.append` T.pack (show num)
-        put (Set.insert i ids, num + 1)
-        if i `Set.member` ids
-            then getNext
-            else return i
+        num <- randomIO
+        return $ "x-" `T.append` T.pack (show (num :: Word))
     addHasComments (TagOpen "p" attrs)
         | Nothing <- lookup "class" attrs = TagOpen "p" $ ("class", "hascomments") : attrs
     addHasComments t = t
@@ -140,7 +125,10 @@ class YesodAloha a where
 
 alohaHtmlField :: (YesodAloha master, YesodJquery master) => Field sub master T.Text
 alohaHtmlField = Field
-    { fieldParse = return . Right . fmap (addIds . sanitizeBalance) . listToMaybe
+    { fieldParse = \l ->
+        case l of
+            x:_ -> fmap (Right . Just) $ liftIO $ addIds $ sanitizeBalance x
+            [] -> return $ Right Nothing
     , fieldView = \theId name val _isReq -> do
         y <- lift getYesod
         addScriptEither $ urlJqueryJs y
