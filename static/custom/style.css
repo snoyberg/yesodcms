@@ -177,6 +177,9 @@ nav.collapse ul {
     font-size: 0.8em;
 }
 
+.clearfix, .devicegrouplabel {
+    clear: both;
+}
 .hangingleft {
     float: left;
 }

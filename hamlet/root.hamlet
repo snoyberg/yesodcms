@@ -30,12 +30,12 @@
                                     <span .name>#{dgName dg}
                                 <div .devicegroup>
                                     $forall label <- dgLabels dg
-                                        <div>
+                                        <div .clearfix>
                                             <input .hangingleft type=checkbox id=label-#{toSinglePiece $ liLabel $ snd label} name=labels value=#{toSinglePiece $ liLabel $ snd label}>
                                             <label .hangingright for=label-#{toSinglePiece $ liLabel $ snd label}>#{fst label}
                         $nothing
                             $forall label <- snd grouppair
-                                <div>
+                                <div .clearfix>
                                     <input .hangingleft type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label}>
                                     <label .hangingright for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
                 <input type=submit value="Search">

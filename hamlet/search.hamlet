@@ -19,7 +19,7 @@
                                 <span .name>#{dgName dg}
                             <div .devicegroup>
                                 $forall label <- dgLabels dg
-                                    <div>
+                                    <div .clearfix>
                                         <input .hangingleft type=checkbox id=label-#{toSinglePiece $ liLabel $ snd label} name=labels value=#{toSinglePiece $ liLabel $ snd label} :isChecked $ liLabel $ snd label:checked>
                                         <label .hangingright for=label-#{toSinglePiece $ liLabel $ snd label}>
                                             \#{fst label}
@@ -27,7 +27,7 @@
                                                 (^{getLabelCount $ snd label})
                     $nothing
                         $forall label <- snd grouppair
-                            <div>
+                            <div .clearfix>
                                 <input .hangingleft type=checkbox id=label-#{toSinglePiece $ fst label} name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
                                 <label .hangingright for=label-#{toSinglePiece $ fst label}>
                                     \#{labelName $ snd label}
