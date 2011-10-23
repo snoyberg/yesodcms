@@ -86,7 +86,7 @@ isIncluded groups mi =
   where
     go (gid, lis) =
         case Map.lookup gid $ miLabels mi of
-            Nothing -> True
+            Nothing -> False -- this is the bit of code that keeps going back and forth
             Just lis' -> not $ Set.null $ Set.intersection lis lis'
 
 toLabelInfo :: LabelId -> YesodDB sub Cms (Maybe LabelInfo)
