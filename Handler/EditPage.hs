@@ -209,13 +209,15 @@ postLabelListR ts = do
                     case mg of
                         Nothing -> return ()
                         Just (gid, _) -> do
-                            ls <- selectList [LabelGroup ==. gid, LabelName `like` addPercent (T.pack v)] []
+                            ls <- selectList (
+                                (LabelGroup ==. gid)
+                                : (if v == "*" then [] else [LabelName `like` addPercent (T.pack v)])) []
                             forM_ ls $ \(lid, _) -> insertBy (FileLabel fid lid) >> return ()
     setMessage "Labels applied"
     redirect RedirectTemporary $ EditPageR ts
 
 like :: PersistField typ => EntityField v typ -> typ -> Filter v
-like f a = Filter f (Left a) (BackendSpecificFilter " LIKE ")
+like f a = Filter f (Left a) (BackendSpecificFilter " ILIKE ")
 
 addPercent :: T.Text -> T.Text
 addPercent t

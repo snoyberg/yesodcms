@@ -108,12 +108,13 @@ executable         yesodcms
                  , system-filepath
                  , system-fileio
                  , xss-sanitize
-                 , uri-enumerator       >= 0.0      && < 0.1
+                 , uri-enumerator       >= 0.1      && < 0.2
+                 , uri-enumerator-file  >= 0.1      && < 0.2
                  , dita
                  , xml-enumerator       >= 0.4.2    && < 0.5
                  , xml2html
-                 , xml-catalog          >= 0.2      && < 0.3
-                 , dtd                  >= 0.0      && < 0.1
+                 , xml-catalog          >= 0.3      && < 0.4
+                 , dtd                  >= 0.1      && < 0.2
                  , http-types
                  , xml-hamlet
                  , spoon
