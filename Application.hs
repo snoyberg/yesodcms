@@ -125,10 +125,13 @@ book ialiases app req = do
             [x] | x == aliasSlug a -> app req
                 { W.pathInfo = pieces
                 }
-            [x, nav] | x == aliasSlug a -> app req
-                { W.pathInfo = pieces
-                , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
-                }
+            [x, nav] | x == aliasSlug a ->
+                case join $ lookup "nav" $ W.queryString req of
+                    Nothing -> app req
+                        { W.pathInfo = pieces
+                        , W.queryString = ("nav", Just $ encodeUtf8 nav) : noNav
+                        }
+                    Just nav' -> redir [x, decodeUtf8With lenientDecode nav'] noNav
             x | x == pieces ->
                 case join $ lookup "nav" $ W.queryString req of
                     Nothing -> redir [aliasSlug a] $ W.queryString req
