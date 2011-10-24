@@ -12,6 +12,7 @@ import Filesystem
 import Control.Monad (forM, when)
 import Network.URI.Enumerator
 import qualified Data.Set as Set
+import Control.Monad.IO.Class (liftIO)
 
 type FileStorePath = T.Text
 
@@ -54,8 +55,19 @@ simpleFileStore dir = FileStore
     , fsMkdir = createTree . (dir </>) . fromText
     , fsSM = toSchemeMap $ return $ Scheme
         { schemeNames = Set.singleton "fs:"
-        , schemeReader = Just $ enumFile . encodeString . (dir </>) . fromText . uriPath
+        , schemeReader = Just $ \uri ->
+            let t = uriPath uri
+             in tryFiles dir uri [t, T.replace "%20" " " t]
         , schemeWriter = Nothing
         }
     , fsFromURI = \u -> if uriScheme u == "fs:" then Just (uriPath u) else Nothing
     }
+
+tryFiles :: FilePath -> URI -> [T.Text] -> Enumerator ByteString IO a
+tryFiles _ uri [] _ = error $ "File not found: " ++ show (toNetworkURI uri)
+tryFiles dir uri (t:ts) step = do
+    let fp = dir </> fromText t
+    e <- liftIO $ isFile fp
+    if e
+        then enumFile (encodeString fp) step
+        else tryFiles dir uri ts step
