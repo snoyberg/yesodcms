@@ -354,7 +354,11 @@ getRawR t = do
     hamletToRepHtml [hamlet|
 <div .raw>
     <a href="#" .close>X
-    <a .inner-link href=@{RedirectorR t}>Open Topic
+    <a .inner-link href=@{RedirectorR t}>
+        $if (==) "xml" ext
+            Open Manual
+        $else
+            Open Article
     $if showAdd
         <input .addcart data-action=@{AddCartR t} type=submit value="Add to MyDocs">
     $else
