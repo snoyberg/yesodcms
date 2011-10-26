@@ -51,6 +51,8 @@ import Data.Maybe (fromMaybe)
 import Control.Monad.IO.Class (MonadIO)
 import Data.IORef (IORef)
 import Network.URI.Enumerator
+import Data.Time (UTCTime)
+import qualified Data.Map as Map
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -65,6 +67,7 @@ data Cms = Cms
     , fileStore :: FileStore
     , rawFiles :: Map T.Text ContentType
     , aliases :: IORef [Alias]
+    , searchCache :: IORef (Map.Map T.Text (UTCTime, [MInfo], Bool))
     }
 
 mkMessage "Cms" "messages" "en"

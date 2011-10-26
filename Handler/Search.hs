@@ -37,13 +37,8 @@ import Text.Hamlet (hamletFile)
 import Handler.Cart (getCarts)
 import Text.Blaze.Renderer.Text (renderHtml)
 import qualified Data.Aeson as A
-
-data MInfo = MInfo
-    { miFile :: T.Text
-    , miTitle :: T.Text
-    , miExcerpt :: TL.Text
-    , miLabels :: GroupedLabels
-    }
+import Data.IORef (readIORef, atomicModifyIORef)
+import Data.Time
 
 safeTail :: [a] -> [a]
 safeTail [] = []
@@ -52,19 +47,6 @@ safeTail (_:xs) = xs
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
 safeHead (x:_) = Just x
-
-data LabelInfo = LabelInfo
-    { liGroup :: GroupId
-    , liLabel :: LabelId
-    , liName :: T.Text
-    }
-    deriving Show
-instance Eq LabelInfo where
-    a == b = liLabel a == liLabel b
-instance Ord LabelInfo where
-    compare a b = compare (liLabel a) (liLabel b)
-
-type GroupedLabels = Map.Map GroupId (Set.Set LabelInfo)
 
 -- | Convert a raw list of labels into a map grouped by the label group.
 groupLabels :: [LabelInfo] -> GroupedLabels
@@ -96,11 +78,68 @@ toLabelInfo lid = do
         Nothing -> return Nothing
         Just l -> return $ Just $ LabelInfo (labelGroup l) lid (labelName l)
 
+cachedQuery :: T.Text -> Handler (Either String ([MInfo], Bool))
+cachedQuery query' = do
+    $(logDebug) $ "cachedQuery: " `T.append` query'
+    Cms { searchCache = isc } <- getYesod
+    sc <- liftIO $ readIORef isc
+    now <- liftIO getCurrentTime
+    mres <-
+        case Map.lookup query' sc of
+            Nothing -> return Nothing
+            Just (expire, mis, isVague) -> do
+                if expire < now
+                    then return Nothing
+                    else return $ Just (mis, isVague)
+    case mres of
+        Just x -> do
+            $(logDebug) $ "Using cached result, total results: " `T.append` T.pack (show $ length $ fst x)
+            return $ Right x
+        Nothing | T.null query' -> do
+            $(logDebug) "Performing a null query, getting everything in database"
+            misAll <- runDB getAllMInfos
+            $(logDebug) $ T.pack $ "Got " ++ show (length misAll) ++ " results"
+            let isVague = False
+            liftIO $ atomicModifyIORef isc $ \m -> (Map.insert query' (cacheTime `addUTCTime` now, misAll, isVague) m, ())
+            return $ Right (misAll, isVague)
+        Nothing -> do
+            res <- queryAll id 0
+            case res of
+                Right ms -> do
+                    misAll <- runDB $ getMInfos ms query'
+                    $(logDebug) $ "Caching new result, total results: " `T.append` T.pack (show $ length misAll)
+                    let isVague = length misAll >= lim
+                    liftIO $ atomicModifyIORef isc $ \m -> (Map.insert query' (cacheTime `addUTCTime` now, misAll, isVague) m, ())
+                    return $ Right (misAll, isVague)
+                Left s -> return $ Left s
+  where
+    cacheTime = 60 * 30 -- thirty minutes.. very arbitrary
+    config = defaultConfig
+        { port = 9312
+        , mode = S.Any
+        , limit = lim
+        }
+    lim = 1000
+    queryAll front off = do
+        res <- liftIO $ query config
+            { offset = off
+            } "yesodcms" $ T.unpack query'
+        case res of
+            S.Ok qr -> do
+                let front' = front . (S.matches qr ++)
+                -- FIXME
+                return $ Right $ front' []
+                {-
+                if length (S.matches qr) == lim
+                    then queryAll front' (off + lim)
+                    else return $ Right $ front' []
+                        -}
+            x -> return $ Left $ show x
+
 getSearchR :: Handler RepHtml
 getSearchR = do
     $(logDebug) "Entering getSearchR"
     mquery <- runInputGet $ iopt textField "q"
-    mres <- maybe (return Nothing) (fmap Just . liftIO . query config "yesodcms" . T.unpack) mquery
     $(logDebug) "Finished querying Sphinx"
     gets <- fmap reqGetParams getRequest
     checkedLabels <- runDB $ fmap catMaybes $ mapM toLabelInfo $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
@@ -108,15 +147,16 @@ getSearchR = do
         isChecked = flip elem (map liLabel checkedLabels)
     let groupedCheckedLabels = groupLabels checkedLabels
     $(logDebug) "Finished grouping"
-    (matches, resultsInner, misAll) <-
-            case mres of
-                Nothing -> return ([], [hamlet||], [])
-                Just (S.Ok qr) -> do
-                    let ms = S.matches qr
-                    misAll <- runDB $ getMInfos ms mquery
-                    let mis = filter (isIncluded groupedCheckedLabels) misAll
-                    return (ms, $(hamletFile "hamlet/search-results-inner.hamlet"), misAll)
-                Just x -> return ([], [hamlet|<p>Error running search: #{show x}|], [])
+    let query' = fromMaybe "" mquery
+    (resultsInner, misAll) <- do
+        emisAll <- cachedQuery query'
+        case emisAll of
+            Left s -> return ([hamlet|<p>Error running search: #{s}|], [])
+            Right (misAll, isVague) -> do
+                let mis' = filter (isIncluded groupedCheckedLabels) misAll
+                let mis = take 50 mis'
+                let isClipped = length mis' > 50
+                return (searchResultsInner mis isVague isClipped, misAll)
     let getLabelCount :: LabelInfo -> Widget
         getLabelCount label = do
             let len = getLabelCountI misAll groupedCheckedLabels label
@@ -155,11 +195,6 @@ getSearchR = do
                 $(widgetFile "search-device-groups")
                 $(widgetFile "search")
                 $(widgetFile "comments")
-  where
-    config = defaultConfig
-        { port = 9312
-        , mode = S.Any
-        }
 
 getSearchXmlpipeR :: Handler RepXml
 getSearchXmlpipeR = do
@@ -223,8 +258,31 @@ getSearchXmlpipeR = do
                                 update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
                                 return [(fid, T.concat [title, " ", text])]
 
-getMInfos :: [S.Match] -> Maybe T.Text -> YesodDB sub Cms [MInfo]
-getMInfos matches mquery = fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
+getAllMInfos :: YesodDB sub Cms [MInfo]
+getAllMInfos = do
+    fs <- selectList [] []
+    fmap catMaybes $ forM fs $ \(fid, f) -> do
+        case f of
+            FileName
+                { fileNameTitle = Just title
+                , fileNameUri = uri
+                , fileNameContent = Just content'
+                } -> do
+                    let content = T.strip content'
+                    labels <- selectList [FileLabelFile ==. fid] [] >>= mapM (toLabelInfo . fileLabelLabel . snd)
+                    return $ Just MInfo
+                        { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
+                        , miTitle = title
+                        , miExcerpt = toHtml $
+                            if T.length content > 100
+                                then T.append (T.take 100 content) "..."
+                                else content
+                        , miLabels = groupLabels $ catMaybes labels
+                        }
+            _ -> return Nothing
+
+getMInfos :: [S.Match] -> T.Text -> YesodDB sub Cms [MInfo]
+getMInfos matches query' = fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
     let fid = Key $ PersistInt64 did
     mf <- get fid
     case mf of
@@ -237,14 +295,14 @@ getMInfos matches mquery = fmap catMaybes $ forM matches $ \S.Match { S.document
                     escape '>' = "&gt;"
                     escape '&' = "&amp;"
                     escape c = T.singleton c
-                rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack $ fromMaybe "" mquery
+                rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack query'
                 case rexcerpt of
                     S.Ok bss -> do
                         labels <- selectList [FileLabelFile ==. fid] [] >>= mapM (toLabelInfo . fileLabelLabel . snd)
                         return $ Just MInfo
                             { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
                             , miTitle = title
-                            , miExcerpt = TL.concat $ map (decodeUtf8With ignore) bss
+                            , miExcerpt = preEscapedLazyText $ TL.concat $ map (decodeUtf8With ignore) bss
                             , miLabels = groupLabels $ catMaybes labels
                             }
                     _ -> return Nothing
@@ -268,3 +326,6 @@ toDeviceGroups orig = do
         if T.null x || T.null y
             then Nothing
             else Just $ Map.singleton x $ Map.singleton y $ LabelInfo (labelGroup l) lid (labelName l)
+
+searchResultsInner :: [MInfo] -> Bool -> Bool -> HtmlUrl CmsRoute
+searchResultsInner mis isVague isClipped = $(hamletFile "hamlet/search-results-inner.hamlet")

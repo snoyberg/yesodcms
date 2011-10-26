@@ -94,6 +94,7 @@ withCms conf logger f = do
                 ]
         idocCache <- newIORef Map.empty
         ialiases <- runConnectionPool (selectList [] []) p >>= newIORef . map snd
+        iSearchCache <- newIORef Map.empty
         let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
             h = Cms conf logger s p
                     [ textFormatHandler
@@ -102,7 +103,7 @@ withCms conf logger f = do
                     , videoFormatHandler
                     , ditaFormatHandler renderHref cache classmap (loadFileId p) addToCartURI
                     , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute addToCartURI
-                    ] (simpleFileStore "data") raw ialiases
+                    ] (simpleFileStore "data") raw ialiases iSearchCache
 #ifdef WINDOWS
         toWaiApp h >>= f . book ialiases >> return ()
 #else

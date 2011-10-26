@@ -102,3 +102,6 @@ link > a {
 .search-results {
     width: 100%;
 }
+.vague, .clipped {
+    color: #900;
+}

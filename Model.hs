@@ -11,6 +11,8 @@ import qualified Yesod.Goodies.Gravatar as G
 import qualified Data.Text as T
 import Data.Maybe (fromMaybe)
 import Network.URI.Enumerator
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 newtype BlogSlugT = BlogSlugT Text
     deriving (Read, Eq, Show, PersistField, SinglePiece, Ord)
@@ -54,3 +56,23 @@ addLabel :: (PersistBackend b m, Functor (b m)) => Key b FileName -> T.Text -> b
 addLabel fid name = do
     lids <- fmap (map fst) $ selectList [LabelName ==. name] []
     mapM_ (insert . FileLabel fid) lids
+
+type GroupedLabels = Map.Map GroupId (Set.Set LabelInfo)
+
+data MInfo = MInfo
+    { miFile :: T.Text
+    , miTitle :: T.Text
+    , miExcerpt :: Html
+    , miLabels :: GroupedLabels
+    }
+
+data LabelInfo = LabelInfo
+    { liGroup :: GroupId
+    , liLabel :: LabelId
+    , liName :: T.Text
+    }
+    deriving Show
+instance Eq LabelInfo where
+    a == b = liLabel a == liLabel b
+instance Ord LabelInfo where
+    compare a b = compare (liLabel a) (liLabel b)
