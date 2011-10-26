@@ -119,7 +119,7 @@ cachedQuery query' = do
         , mode = S.Any
         , limit = lim
         }
-    lim = 1000
+    lim = 200
     queryAll front off = do
         res <- liftIO $ query config
             { offset = off

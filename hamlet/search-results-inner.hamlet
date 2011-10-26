@@ -1,5 +1,5 @@
 $if isVague
-    <p .vague>Your search term returned too many results. Try adding more terms to narrow down the result set. Your results are currently limited to the first 1000 matches.
+    <p .vague>Your search term returned too many results. Try adding more terms to narrow down the result set. Your results are currently limited to the first 200 matches.
 $elseif isClipped
     <p .clipped>Showing first 50 results. Please narrow down your result set with the filters on the left.
 $forall mi <- mis
