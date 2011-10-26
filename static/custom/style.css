@@ -133,7 +133,7 @@ div.result a, div.result a:visited {
     font-weight: bold;
     color: #114170;
 }
-span.match {
+span.match, .excerpt b {
     color: #f8a23c;
 }
 div.excerpt {
