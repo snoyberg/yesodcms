@@ -19,10 +19,12 @@ import FormatHandler
 import Data.Maybe (catMaybes)
 import Control.Monad (forM, when)
 import Database.Persist.Base
+import Database.Persist.GenericSql.Raw (withStmt)
 import qualified Text.Search.Sphinx.ExcerptConfiguration as E
 import Data.Text.Lazy.Encoding (decodeUtf8With)
+import qualified Data.Text.Encoding as TE
 import Data.Text.Encoding.Error (ignore)
-import Text.Blaze (preEscapedLazyText)
+import Text.Blaze (preEscapedLazyText, preEscapedText)
 import Data.Enumerator (($$), run_, Enumerator, ($=), concatEnums, enumList, (=$), liftTrans)
 import qualified Data.Enumerator.List as EL
 import qualified Data.XML.Types as X
@@ -103,12 +105,12 @@ cachedQuery query' = do
             liftIO $ atomicModifyIORef isc $ \m -> (Map.insert query' (cacheTime `addUTCTime` now, misAll, isVague) m, ())
             return $ Right (misAll, isVague)
         Nothing -> do
-            res <- queryAll id 0
+            res <- queryAll id (0 :: Int)
             case res of
-                Right ms -> do
-                    misAll <- runDB $ getMInfos ms query'
+                Right misAll -> do
+                    --misAll <- runDB $ getMInfos ms query'
                     $(logDebug) $ "Caching new result, total results: " `T.append` T.pack (show $ length misAll)
-                    let isVague = length misAll >= lim
+                    let isVague = False -- length misAll >= lim
                     liftIO $ atomicModifyIORef isc $ \m -> (Map.insert query' (cacheTime `addUTCTime` now, misAll, isVague) m, ())
                     return $ Right (misAll, isVague)
                 Left s -> return $ Left s
@@ -120,6 +122,7 @@ cachedQuery query' = do
         , limit = lim
         }
     lim = 200
+    {-
     queryAll front off = do
         res <- liftIO $ query config
             { offset = off
@@ -135,6 +138,37 @@ cachedQuery query' = do
                     else return $ Right $ front' []
                         -}
             x -> return $ Left $ show x
+    -}
+    queryAll _ _ = do
+        let queryE = T.replace "'" "''" query'
+        let sql = T.concat
+                [ "SELECT id, uri, title, ts_headline('english', content, plainto_tsquery('"
+                , queryE
+                , "')) FROM \"FileName\" WHERE to_tsvector(content) @@ plainto_tsquery('"
+                , queryE
+                , "') ORDER BY ts_rank(to_tsvector(content), plainto_tsquery('"
+                , queryE
+                , "'))"
+                ]
+        let loop front x = do
+                y <- x
+                case y of
+                    Nothing -> return $ Right $ front []
+                    Just [PersistInt64 fid', PersistByteString url', PersistByteString title', PersistByteString excerpt'] -> do
+                        let url = T.drop 1 $ T.dropWhile (/= ':') $ TE.decodeUtf8With ignore url'
+                        let title = TE.decodeUtf8With ignore title'
+                        let excerpt = preEscapedText $ TE.decodeUtf8With ignore excerpt'
+                        let fid = Key $ PersistInt64 fid'
+                        labels <- selectList [FileLabelFile ==. fid] [] >>= mapM (toLabelInfo . fileLabelLabel . snd)
+                        let mi = MInfo
+                                { miFile = url
+                                , miTitle = title
+                                , miExcerpt = excerpt
+                                , miLabels = groupLabels $ catMaybes labels
+                                }
+                        loop (front . (mi:)) x
+                    Just _ -> loop front x
+        runDB $ withStmt sql [] $ loop id
 
 getSearchR :: Handler RepHtml
 getSearchR = do
