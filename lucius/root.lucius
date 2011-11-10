@@ -41,7 +41,7 @@ article {
 }
 
 .column h1 {
-    color: #f89d30;
+    color: #{headingColor};
     font-size: 1em;
 }
 .column h2 {
@@ -88,7 +88,7 @@ fieldset:last-of-type {
     display: none;
 }
 legend {
-    color: #f89d30;
+    color: #{headingColor};
     text-transform: uppercase;
     font-weight: bold;
 }

@@ -21,6 +21,7 @@ module Foundation
     , fileTitle'
     , defaultLayoutExtraParents
     , addToCartURI
+    , headingColor
     ) where
 
 import Yesod
@@ -115,6 +116,9 @@ defaultLayoutExtraParents parents' widget = do
         $(widgetFile "collapse")
     pc' <- widgetToPageContent $(widgetFile "default-layout")
     hamletToRepHtml $(hamletFile "default-layout-wrapper")
+
+headingColor :: T.Text
+headingColor = "#0073ac"
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.

@@ -193,7 +193,7 @@ img {
 }
 
 .inmydocs {
-    color: #f89d30;
+    color: #{headingColor};
     font-style: italic;
 }
 
