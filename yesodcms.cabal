@@ -92,7 +92,7 @@ executable         yesodcms
                  , persistent-template
                  , persistent-postgresql >= 0.6 && < 0.7
                  , template-haskell
-                 , hamlet               >= 0.10     && < 0.11
+                 , hamlet               >= 0.10.3   && < 0.11
                  , shakespeare-css      >= 0.10     && < 0.11
                  , shakespeare-js       >= 0.10     && < 0.11
                  , shakespeare-text     >= 0.10     && < 0.11

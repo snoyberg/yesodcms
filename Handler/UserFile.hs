@@ -355,7 +355,7 @@ getRawR t = do
 <div .raw>
     <a href="#" .close>X
     <a .inner-link href=@{RedirectorR t}>
-        $if (==) "xml" ext
+        $if (||) ((==) "xml" ext) ((==) "dita" ext)
             Open Manual
         $else
             Open Article
