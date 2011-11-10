@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Search
     ( getSearchR
-    , getSearchXmlpipeR
     , getLabels
     , DeviceGroup (..)
     , toDeviceGroups
@@ -10,28 +9,15 @@ module Handler.Search
 
 import Foundation hiding (hamletFile)
 import Data.Maybe (fromMaybe, mapMaybe)
-import Text.Search.Sphinx
-import qualified Text.Search.Sphinx.Types as S
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import FileStore
-import FormatHandler
 import Data.Maybe (catMaybes)
 import Control.Monad (forM, when)
 import Database.Persist.Base
 import Database.Persist.GenericSql.Raw (withStmt)
-import qualified Text.Search.Sphinx.ExcerptConfiguration as E
-import Data.Text.Lazy.Encoding (decodeUtf8With)
 import qualified Data.Text.Encoding as TE
 import Data.Text.Encoding.Error (ignore)
-import Text.Blaze (preEscapedLazyText, preEscapedText)
-import Data.Enumerator (($$), run_, Enumerator, ($=), concatEnums, enumList, (=$), liftTrans)
-import qualified Data.Enumerator.List as EL
-import qualified Data.XML.Types as X
-import Network.Wai (Response (ResponseEnumerator))
-import Network.HTTP.Types (status200)
-import Text.XML.Stream.Render (renderBuilder, def)
-import Database.Persist.GenericSql (SqlPersist, runSqlPool)
+import Text.Blaze (preEscapedText)
 import Handler.Profile (getLabels)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -116,29 +102,6 @@ cachedQuery query' = do
                 Left s -> return $ Left s
   where
     cacheTime = 60 * 30 -- thirty minutes.. very arbitrary
-    config = defaultConfig
-        { port = 9312
-        , mode = S.Any
-        , limit = lim
-        }
-    lim = 200
-    {-
-    queryAll front off = do
-        res <- liftIO $ query config
-            { offset = off
-            } "yesodcms" $ T.unpack query'
-        case res of
-            S.Ok qr -> do
-                let front' = front . (S.matches qr ++)
-                -- FIXME
-                return $ Right $ front' []
-                {-
-                if length (S.matches qr) == lim
-                    then queryAll front' (off + lim)
-                    else return $ Right $ front' []
-                        -}
-            x -> return $ Left $ show x
-    -}
     queryAll _ _ = do
         let queryE = T.replace "'" "''" query'
         let sql = T.concat
@@ -172,9 +135,7 @@ cachedQuery query' = do
 
 getSearchR :: Handler RepHtml
 getSearchR = do
-    $(logDebug) "Entering getSearchR"
     mquery <- runInputGet $ iopt textField "q"
-    $(logDebug) "Finished querying Sphinx"
     gets <- fmap reqGetParams getRequest
     checkedLabels <- runDB $ fmap catMaybes $ mapM toLabelInfo $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") gets
     let isChecked :: LabelId -> Bool
@@ -230,68 +191,6 @@ getSearchR = do
                 $(widgetFile "search")
                 $(widgetFile "comments")
 
-getSearchXmlpipeR :: Handler RepXml
-getSearchXmlpipeR = do
-    Cms { formatHandlers = fhs, fileStore = fs, connPool = pool } <- getYesod
-    let events = concatEnums
-            [ enumList 8 startEvents
-            , docEnum fhs fs
-            , enumList 8 endEvents
-            ]
-    sendWaiResponse $ ResponseEnumerator $ \sriter -> do
-        let iter = sriter status200 [("Content-Type", "text/xml")]
-        flip runSqlPool pool $ run_ $ events $$ renderBuilder def =$ liftTrans iter
-  where
-    toName x = X.Name x (Just "http://sphinxsearch.com/") (Just "sphinx")
-    docset = toName "docset"
-    schema = toName "schema"
-    field = toName "field"
-    document = toName "document"
-    content = "content" -- no prefix
-
-    startEvents =
-        [ X.EventBeginDocument
-        , X.EventBeginElement docset []
-        , X.EventBeginElement schema []
-        , X.EventBeginElement field [("name", [X.ContentText "content"])]
-        , X.EventEndElement field
-        , X.EventEndElement schema
-        ]
-
-    endEvents =
-        [ X.EventEndElement docset
-        ]
-
-    pairToEvents :: (FileNameId, T.Text) -> [X.Event]
-    pairToEvents (fid, t) =
-        [ X.EventBeginElement document [("id", [X.ContentText $ toSinglePiece fid])]
-        , X.EventBeginElement content []
-        , X.EventContent $ X.ContentText t
-        , X.EventEndElement content
-        , X.EventEndElement document
-        ]
-
-    docEnum :: [FormatHandler Cms] -> FileStore -> Enumerator X.Event (SqlPersist IO) a
-    docEnum fhs fs = (selectEnum [] [] $= EL.concatMapM (helper fhs fs)) $= EL.concatMap pairToEvents
-
-    helper :: [FormatHandler Cms] -> FileStore -> (FileNameId, FileName) -> SqlPersist IO [(FileNameId, T.Text)]
-    helper fhs fs (fid, f) = do
-        let t = T.drop 1 $ T.dropWhile (/= ':') $ fileNameUri f
-        case findHandler (snd $ T.breakOnEnd "." t) fhs of
-            Nothing -> return []
-            Just fh -> do
-                muri <- liftIO $ fsGetFile fs t
-                case muri of
-                    Nothing -> return []
-                    Just uri -> do
-                        mtext <- liftIO $ fhToText fh (fsSM fs) uri
-                        case mtext of
-                            Nothing -> return []
-                            Just text -> do
-                                title <- fileTitle' fs fhs t
-                                update fid [FileNameTitle =. Just title, FileNameContent =. Just text]
-                                return [(fid, T.concat [title, " ", text])]
-
 getAllMInfos :: YesodDB sub Cms [MInfo]
 getAllMInfos = do
     fs <- selectList [] []
@@ -314,33 +213,6 @@ getAllMInfos = do
                         , miLabels = groupLabels $ catMaybes labels
                         }
             _ -> return Nothing
-
-getMInfos :: [S.Match] -> T.Text -> YesodDB sub Cms [MInfo]
-getMInfos matches query' = fmap catMaybes $ forM matches $ \S.Match { S.documentId = did } -> do
-    let fid = Key $ PersistInt64 did
-    mf <- get fid
-    case mf of
-        Just FileName
-            { fileNameTitle = Just title
-            , fileNameContent = Just content
-            , fileNameUri = uri
-            } -> do
-                let escape '<' = "&lt;"
-                    escape '>' = "&gt;"
-                    escape '&' = "&amp;"
-                    escape c = T.singleton c
-                rexcerpt <- liftIO $ buildExcerpts E.altConfig { E.port = 9312 } [T.unpack $ T.concatMap escape content] "yesodcms" $ T.unpack query'
-                case rexcerpt of
-                    S.Ok bss -> do
-                        labels <- selectList [FileLabelFile ==. fid] [] >>= mapM (toLabelInfo . fileLabelLabel . snd)
-                        return $ Just MInfo
-                            { miFile = T.drop 1 $ T.dropWhile (/= ':') uri
-                            , miTitle = title
-                            , miExcerpt = preEscapedLazyText $ TL.concat $ map (decodeUtf8With ignore) bss
-                            , miLabels = groupLabels $ catMaybes labels
-                            }
-                    _ -> return Nothing
-        _ -> return Nothing
 
 data DeviceGroup = DeviceGroup
     { dgName :: T.Text

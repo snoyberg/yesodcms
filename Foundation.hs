@@ -295,7 +295,6 @@ instance YesodBreadcrumbs Cms where
     breadcrumb ContentFeedItemR{} = return ("", Nothing)
     breadcrumb BlogPostNoDateR{} = return ("", Nothing)
     breadcrumb CreateBlogR{} = return ("", Nothing)
-    breadcrumb SearchXmlpipeR = return ("", Nothing)
     breadcrumb BlogR = return ("", Nothing)
     breadcrumb CreateAliasR{} = return ("", Nothing)
     breadcrumb GroupsR{} = return ("", Nothing)

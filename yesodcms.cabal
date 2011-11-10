@@ -126,7 +126,6 @@ executable         yesodcms
                  , old-locale
                  , yesod-goodies        >= 0.0.5
                  , yesod-newsfeed
-                 , sphinx
                  , tagsoup
                  , pandoc
                  , http-enumerator
