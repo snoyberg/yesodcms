@@ -21,7 +21,7 @@
                         <a href=@{CartR}>MyDocs
                     <a href=@{HowToArticlesR}>How to Articles
                     <a href=@{VideosR}>Videos
-                    <a href="http://feeds.feedburner.com/emersonsocialkb" title="Subscribe to my feed" rel="alternate" type="application/rss+xml">
+                    <a href=@{ContentFeedR} title="Subscribe to my feed" rel="alternate" type="application/rss+xml">
                         <img src=@{StaticR feed_png} style="border:0;height:16px">
                         \ News Feed (Subscribe)
         <nav #breadcrumbs>

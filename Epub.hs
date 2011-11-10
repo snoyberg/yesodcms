@@ -72,7 +72,7 @@ contentopf =
         [xml|
 <{http://www.idpf.org/2007/opf}metadata>
     <{http://purl.org/dc/elements/1.1/}title>MyDocs
-    <{http://purl.org/dc/elements/1.1/}identifier id=bookid>emerson-mydocs
+    <{http://purl.org/dc/elements/1.1/}identifier id=bookid>ditadocs-mydocs
     <{http://purl.org/dc/elements/1.1/}language>en
     <{http://www.idpf.org/2007/opf}meta name=cover content=cover-image>
 <{http://www.idpf.org/2007/opf}manifest>
@@ -93,7 +93,7 @@ tocncx =
 <head>
     <meta name=fixme content=fixme>
 <docTitle>
-    <text>Emerson MyDocs
+    <text>Ditadocs MyDocs
 <navMap>
     <navPoint playOrder=1 id=index.html>
         <navLabel>

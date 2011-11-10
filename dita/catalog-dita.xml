@@ -1600,6 +1600,4 @@
 <public publicId="-//IBM//ELEMENTS DITA Element Reference//EN" xml:base="demo/elementref/" uri="elementref.mod"/>
 
 
-<nextCatalog catalog="emersonDtd/catalog.xml"/>
-
 </catalog>

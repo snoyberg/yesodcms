@@ -1,5 +1,5 @@
 Default: &defaults
-  host: "10.0.0.3"
+  host: "10.0.2.15"
   port: 3000
   connectionPoolSize: 10
 
@@ -13,6 +13,6 @@ Staging:
   <<: *defaults
 
 Production:
-  approot: "http://socialkb.suite-sol.com"
-  port: 5007
-  connectionPoolSize: 10
+  host: "ditadocs.content-lifecycle.com"
+  port: 80
+  connectionPoolSize: 100
