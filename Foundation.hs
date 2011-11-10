@@ -105,6 +105,8 @@ defaultLayoutExtraParents parents' widget = do
     let isHome = Just RootR == fmap tm cr
     pc <- widgetToPageContent $ do
         setTitle $ toHtml title'
+        $(widgetFile "normalize")
+        $(widgetFile "style")
         widget
         addScriptEither $ urlJqueryJs y
         $(widgetFile "comments")
