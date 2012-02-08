@@ -20,10 +20,10 @@ import qualified Data.Text as T
 import Yesod.Goodies.Gravatar
 import Data.Monoid (mempty)
 import Control.Monad (unless)
-import Database.Persist.Join hiding (runJoin)
-import Database.Persist.Join.Sql (runJoin)
+import Database.Persist.Query.Join hiding (runJoin)
+import Database.Persist.Query.Join.Sql (runJoin)
 
-form :: UserId -> User -> Html -> Form Cms Cms (FormResult User, Widget)
+form :: UserId -> User -> Form User
 form uid user = renderTable $ User
     <$> pure (userEmail user)
     <*> aopt textField "Display name" (Just $ userName user)
@@ -33,15 +33,15 @@ form uid user = renderTable $ User
     unusedHandle handle = do
         mu <- runDB $ getBy $ UniqueHandle handle
         case mu of
-            Just (uid', _)
+            Just (Entity uid' _)
                 | uid' /= uid -> return $ Left ("Username in use" :: T.Text)
             _ -> return $ Right handle
 
-newLabelForm :: Html -> Form Cms Cms (FormResult Label, Widget)
+newLabelForm :: Form Label
 newLabelForm nonce = do
     (name, nameview) <- mreq textField "Name" Nothing
-    (group, groupview) <- mreq (selectField' $ optionsPersist [] [Asc GroupPriority] groupName) "Group" Nothing
-    return (Label <$> fmap fst group <*> name, [whamlet|
+    (group, groupview) <- mreq (selectField $ optionsPersist [] [Asc GroupPriority] groupName) "Group" Nothing
+    return (Label <$> fmap entityKey group <*> name, [whamlet|
 \#{nonce}
 Create a field name ^{fvInput nameview} in the group ^{fvInput groupview}. #
 <input type=submit value=Create>
@@ -49,7 +49,7 @@ Create a field name ^{fvInput nameview} in the group ^{fvInput groupview}. #
 
 getProfileR :: Handler RepHtml
 getProfileR = do
-    (uid, u) <- requireAuth
+    Entity uid u <- requireAuth
     ((res, widget), enctype) <- runFormPost $ form uid u
     mgroups <-
         if userAdmin u
@@ -59,13 +59,13 @@ getProfileR = do
         if userAdmin u
             then fmap Just $ runDB getLabels
             else return Nothing
-    liftIO $ print mlabels
+    liftIO $ print (mlabels :: Maybe [(Entity Group, [Entity Label])])
     ((_, labelForm), _) <- runFormPost newLabelForm
     case res of
         FormSuccess u' -> do
             runDB $ replace uid u'
             setMessage "Profile updated"
-            redirect RedirectTemporary ProfileR
+            redirect ProfileR
         _ -> defaultLayout $(widgetFile "profile")
   where
     opts = defaultOptions
@@ -78,7 +78,7 @@ postProfileR = getProfileR
 
 requireAdmin :: Handler ()
 requireAdmin = do
-    (_, u) <- requireAuth
+    Entity _ u <- requireAuth
     unless (userAdmin u) $ permissionDenied "Only an admin can perform that action"
 
 postGroupsR :: Handler ()
@@ -92,29 +92,29 @@ postGroupsR = do
     case x of
         Left{} -> setMessage "Group with that name already exists"
         Right{} -> setMessage "Group created"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 
 postUpGroupR, postDownGroupR, postDeleteGroupR :: GroupId -> Handler ()
 postUpGroupR gid = do
     requireAdmin
     runDB $ update gid [GroupPriority -=. 15] >> fixGroups
     setMessage "Group moved up"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 postDownGroupR gid = do
     requireAdmin
     runDB $ update gid [GroupPriority +=. 15] >> fixGroups
     setMessage "Group moved down"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 postDeleteGroupR gid = do
     requireAdmin
     -- FIXME cascade
     runDB $ delete gid >> fixGroups
     setMessage "Group deleted"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 
 fixGroups :: YesodDB Cms Cms ()
 fixGroups = do
-    keys <- fmap (map fst) $ selectList [] [Asc GroupPriority]
+    keys <- fmap (map entityKey) $ selectList [] [Asc GroupPriority]
     mapM_ (\(key, priority) -> update key [GroupPriority =. priority]) $ zip keys [10, 20..]
 
 postLabelsR :: Handler ()
@@ -128,7 +128,7 @@ postLabelsR = do
                 Left{} -> setMessage "Label already exists"
                 Right{} -> setMessage "New label created"
         _ -> setMessage "Invalid entry"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 
 postDeleteLabelR :: LabelId -> Handler ()
 postDeleteLabelR lid = do
@@ -136,9 +136,9 @@ postDeleteLabelR lid = do
     -- FIXME cascade
     runDB $ delete lid
     setMessage "Label deleted"
-    redirect RedirectTemporary ProfileR
+    redirect ProfileR
 
-getLabels :: YesodDB Cms Cms [((GroupId, Group), [(LabelId, Label)])]
+getLabels :: YesodDB Cms Cms [(Entity Group, [Entity Label])]
 getLabels = runJoin (selectOneMany (LabelGroup <-.) labelGroup)
     { somOrderOne = [Asc GroupPriority]
     , somOrderMany = [Asc LabelName]

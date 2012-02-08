@@ -7,9 +7,7 @@ module Handler.Comments
     ) where
 
 import Foundation
-import Data.Aeson.Types (Value (Object, Number, String, Array))
-import qualified Data.Map as Map
-import Data.Vector (fromList)
+--import Data.Aeson.Types (Value (Object, Number, String, Array))
 import Text.Blaze.Renderer.Text (renderHtml)
 import Data.Time
 import Data.Text (Text, pack)
@@ -24,32 +22,32 @@ getCommentCountR :: Handler RepJson
 getCommentCountR = do
     element <- runInputGet $ ireq textField "element"
     x <- runDB $ count [CommentElement ==. element]
-    jsonToRepJson $ Object $ Map.singleton "count" $ Number $ fromIntegral x
+    jsonToRepJson $ object ["count" .= x]
 
 getCommentsR :: Handler RepJson
 getCommentsR = do
     muid <- maybeAuthId
     element <- runInputGet $ ireq textField "element"
-    comments <- runDB $ selectList [CommentElement ==. element] [Asc CommentTime] >>= (mapM $ \(_, c) -> do
+    comments <- runDB $ selectList [CommentElement ==. element] [Asc CommentTime] >>= (mapM $ \(Entity _ c) -> do
         a <- get404 $ commentAuthor c
-        return $ Object $ Map.fromList
-            [ ("name", String $ toStrict $ renderHtml $ userDisplayName a)
-            , ("gravatar", String $ pack $ gravatarImg (userEmail a) defaultOptions
+        return $ object
+            [ "name" .= toStrict (renderHtml $ userDisplayName a)
+            , "gravatar" .= gravatarImg (userEmail a) defaultOptions
                 { gSize = Just $ Size 40
                 , gDefault = Just Identicon
-                })
-            , ("date", String $ prettyDateTime $ commentTime c)
-            , ("content", String $ toStrict $ renderHtml $ toHtml $ commentContent c)
+                }
+            , "date" .= prettyDateTime (commentTime c)
+            , "content" .= toStrict (renderHtml $ toHtml $ commentContent c)
             ]
         )
-    jsonToRepJson $ Object $ Map.fromList
-        [ ("comments", Array $ fromList comments)
-        , ("loggedin", jsonScalar $ maybe "false" (const "true") muid)
+    jsonToRepJson $ object
+        [ "comments" .= array comments
+        , "loggedin" .= maybe ("false" :: String) (const "true") muid
         ]
 
 postCommentsR :: Handler ()
 postCommentsR = do
-    (uid, u) <- requireAuth
+    Entity uid u <- requireAuth
     element <- runInputGet $ ireq textField "element"
     content <- runInputPost $ ireq textField "content"
     source <- runInputPost $ ireq textField "source" -- FIXME add some sanity checking that this is the same site
@@ -62,7 +60,7 @@ postCommentsR = do
     runDB $ do
         _ <- insert $ Comment element uid content now
         addFeedItemText (fromMaybe (userHandle u) (userName u) `T.append` " posted a comment") dest (toHtml content)
-    redirectText RedirectTemporary dest
+    redirect dest
 
 prettyDateTime :: UTCTime -> Text
 prettyDateTime = pack . formatTime defaultTimeLocale "%B %e, %Y %l:%M %P"

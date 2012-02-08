@@ -20,25 +20,25 @@ import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe, isJust)
 import Handler.EditPage (routes, setCanons)
-import Network.HTTP.Types (decodePathSegments)
+import Network.HTTP.Types (decodePathSegments, status301)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Map as Map
-import Data.Enumerator (($=), enumList)
-import qualified Data.Enumerator.List as EL
+import Data.Conduit (($=), Flush (Chunk))
+import qualified Data.Conduit.List as CL
 import Blaze.ByteString.Builder (fromByteString)
-import Network.URI.Enumerator (readURI)
+import Network.URI.Conduit (readURI)
 import Codec.Archive.Zip
 import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
 import Yesod.Goodies.Gravatar
 import Data.Time
-import Network.HTTP.Enumerator
+import Network.HTTP.Conduit
 import Data.IORef (writeIORef)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
-    users <- runDB $ fmap (map snd) $ selectList [] [Asc UserHandle]
+    users <- runDB $ fmap (map entityVal) $ selectList [] [Asc UserHandle]
     defaultLayout $(widgetFile "users")
   where
     opts = defaultOptions
@@ -48,17 +48,17 @@ getUsersR = do
 
 getUserFileIntR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileIntR uid' ts = do
-    uid <- maybe notFound return $ fromSinglePiece uid'
+    uid <- maybe notFound return $ fromPathPiece uid'
     u <- runDB $ get404 uid
     gets <- reqGetParams `fmap` getRequest
-    redirectParams RedirectPermanent (UserFileR (userHandle u) ts) gets
+    redirectWith status301 (UserFileR (userHandle u) ts, gets)
 
 getUserFileR :: T.Text -> [T.Text] -> Handler RepHtml
 getUserFileR user ts = do
-    (uid, _) <- runDB $ getBy404 $ UniqueHandle user
+    Entity uid _ <- runDB $ getBy404 $ UniqueHandle user
     mu <- maybeAuth
-    let canWrite = Just uid == fmap fst mu
-    let ts' = "home" : toSinglePiece uid : ts
+    let canWrite = Just uid == fmap entityKey mu
+    let ts' = "home" : toPathPiece uid : ts
     let t = T.intercalate "/" ts'
     Cms { fileStore = fs, formatHandlers = fhs, rawFiles } <- getYesod
     menum <- liftIO $ fsGetFile fs t
@@ -76,7 +76,7 @@ getUserFileR user ts = do
             let ext = snd $ T.breakOnEnd "." t
             case Map.lookup (T.toLower ext) $ rawFiles of
                 -- FIXME re-enable sendfile optimization
-                Just mime -> sendResponse (mime, ContentEnum (readURI (fsSM fs) enum $= EL.map fromByteString))
+                Just mime -> sendResponse (mime, ContentSource (readURI (fsSM fs) enum $= CL.map (Chunk . fromByteString)))
                 Nothing -> do
                     -- Check for a canonical path and redirect if present
                     mcanon <- runDB $ selectFirst [CanonPathRefered ==. t] []
@@ -88,7 +88,7 @@ getUserFileR user ts = do
                                 fhWidget fh (fsSM fs) enum
                                 mblogPost <-
                                     case mu of
-                                        Just (_, u)
+                                        Just (Entity _ u)
                                             | userAdmin u -> fmap Just $ do
                                                 let url = CreateBlogR t
                                                 ((_, widget), _) <- lift $ runFormPost blogForm
@@ -101,13 +101,13 @@ getUserFileR user ts = do
                                                 return ((url, widget), (url2, widget2))
                                         _ -> return Nothing
                                 $(widgetFile "user-file-edit")
-                        Just (_, canon) -> redirectText RedirectTemporary $ canonPathRedirect canon
+                        Just (Entity _ canon) -> redirect $ canonPathRedirect canon
 
-blogForm :: Html -> Form Cms Cms (FormResult T.Text, Widget)
+blogForm :: Form T.Text
 blogForm =
     renderTable $ areq (checkM validSlug textField) "Blog slug" Nothing
   where
-    validSlug :: T.Text -> GGHandler Cms Cms IO (Either T.Text T.Text)
+    validSlug :: T.Text -> Handler (Either T.Text T.Text)
     validSlug slug'
         | T.any invalidChar slug' = return $ Left "Slug must be lowercase letters, numbers and hyphens"
         | otherwise = do
@@ -123,14 +123,14 @@ blogForm =
         | c == '-' = False
         | otherwise = True
 
-aliasForm :: Maybe T.Text -> Maybe T.Text -> Html -> Form Cms Cms (FormResult (T.Text, T.Text, T.Text), Widget)
+aliasForm :: Maybe T.Text -> Maybe T.Text -> Form (T.Text, T.Text, T.Text)
 aliasForm murl mtitle =
     renderTable $ (,,)
         <$> areq (checkM validSlug textField) "Alias slug" Nothing
         <*> areq urlField "Destination" murl
         <*> areq textField "Title" mtitle
   where
-    validSlug :: T.Text -> GGHandler Cms Cms IO (Either T.Text T.Text)
+    validSlug :: T.Text -> Handler (Either T.Text T.Text)
     validSlug slug
         | T.any invalidChar slug = return $ Left "Slug must be lowercase letters, numbers and hyphens"
         | otherwise = do
@@ -152,7 +152,7 @@ currYearMonth = do
 
 postCreateBlogR :: T.Text -> Handler RepHtml
 postCreateBlogR t = do
-    (uid, u) <- requireAuth
+    Entity uid u <- requireAuth
     unless (userAdmin u) $ permissionDenied "Only admins can make blog posts"
     ((res, widget), _) <- runFormPost blogForm
     case res of
@@ -163,7 +163,7 @@ postCreateBlogR t = do
             title <- fileTitle t
             _ <- runDB $ insert $ Blog now t slug year month uid title
             setMessage "Blog post created"
-            redirect RedirectTemporary $ BlogPostR year month slug
+            redirect $ BlogPostR year month slug
         _ -> defaultLayout [whamlet|
 <form method=post>
     <table>
@@ -175,7 +175,7 @@ postCreateBlogR t = do
 
 postCreateAliasR :: Handler RepHtml
 postCreateAliasR = do
-    (_uid, u) <- requireAuth
+    Entity _uid u <- requireAuth
     unless (userAdmin u) $ permissionDenied "Only admins can make aliases"
     ((res, widget), _) <- runFormPost $ aliasForm Nothing Nothing
     case res of
@@ -185,11 +185,11 @@ postCreateAliasR = do
                     , aliasOrig = T.drop 1 $ snd $ T.break (== '/') $ T.drop 2 $ snd $ T.breakOn "//" url
                     , aliasTitle = title
                     }
-            as <- runDB $ insert a >> fmap (map snd) (selectList [] [])
+            as <- runDB $ insert a >> fmap (map entityVal) (selectList [] [])
             Cms { aliases } <- getYesod
             liftIO $ writeIORef aliases as
             setMessage "Alias created"
-            redirectText RedirectTemporary $ T.cons '/' slug
+            redirect $ T.cons '/' slug
         _ -> defaultLayout [whamlet|
 <form method=post>
     <table>
@@ -201,7 +201,7 @@ postCreateAliasR = do
 
 postUserFileR :: T.Text -> [T.Text] -> Handler ()
 postUserFileR user ts = do
-    (uid, _) <- runDB $ getBy404 $ UniqueHandle user
+    Entity uid _ <- runDB $ getBy404 $ UniqueHandle user
     muid <- maybeAuthId
     unless (Just uid == muid) $ permissionDenied "Only the owner can edit these files"
     Cms { fileStore = fs, formatHandlers = fhs, rawFiles = rfs } <- getYesod
@@ -214,21 +214,22 @@ postUserFileR user ts = do
                     case mfolder of
                         Just folder -> do
                             let ts' = ts ++ [folder]
-                                t = T.intercalate "/" $ "home" : toSinglePiece uid : ts'
+                                t = T.intercalate "/" $ "home" : toPathPiece uid : ts'
                             liftIO $ fsMkdir fs t
                             setMessage "Folder created"
-                            redirect RedirectTemporary $ UserFileR user ts'
+                            redirect $ UserFileR user ts'
                         Nothing -> do
                             (file, formatNum) <- runInputPost $ (,) <$> ireq textField "file" <*> ireq intField "format"
                             format <- maybe (invalidArgs ["Incorrect format"]) return $ atMay formatNum fhs
                             ext <- maybe (error "All FormatHandlers need at least one extension") return
                                  $ listToMaybe $ Set.toList $ fhExts format
-                            redirect RedirectTemporary $ EditPageR $ "home" : toSinglePiece uid : ts ++ [T.concat [file, ".", ext]]
+                            redirect $ EditPageR $ "home" : toPathPiece uid : ts ++ [T.concat [file, ".", ext]]
                 Just url ->
                     case parseUrl $ T.unpack url of
                         Nothing -> invalidArgs ["Invalid URL: " `T.append` url]
                         Just req -> do
-                            res <- liftIO $ withManager $ httpLbsRedirect req -- FIXME put in some DoS prevention
+                            y <- getYesod
+                            res <- lift $ httpLbs req $ httpManager y -- FIXME put in some DoS prevention
                             uploadZipLbs uid fs fhs rfs $ responseBody res
         Just fi -> uploadZipLbs uid fs fhs rfs $ fileContent fi
   where
@@ -240,14 +241,14 @@ postUserFileR user ts = do
             Nothing -> do
                 setMessage "Invalid ZIP file"
             Just{} -> do
-                let toPath e = T.intercalate "/" $ "home" : toSinglePiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
+                let toPath e = T.intercalate "/" $ "home" : toPathPiece uid : ts ++ T.splitOn "/" (T.pack $ eRelativePath e)
                 (updated, nu) <- execWriterT $ mapM_ (upload fs rfs fhs toPath) $ zEntries archive
                 runDB $ mapM_ setCanons $ Set.toList updated -- FIXME doesn't seem to be working
                 setMessage $
                     if Set.null nu
                         then "ZIP file uploaded successfully"
                         else toHtml $ "The following files could not be uploaded: " `T.append` (T.intercalate ", " $ Set.toList nu)
-        redirect RedirectTemporary $ UserFileR user ts
+        redirect $ UserFileR user ts
     atMay :: Int -> [a] -> Maybe a
     atMay _ [] = Nothing
     atMay 0 (x:_) = Just x
@@ -268,7 +269,7 @@ postUserFileR user ts = do
                             Just enum -> liftIO $ fsPutFile fs t enum
                             Nothing -> onErr
             Just{} -> do
-                liftIO $ fsPutFile fs t $ enumList 8 $ L.toChunks lbs
+                liftIO $ fsPutFile fs t $ CL.sourceList $ L.toChunks lbs
                 onSucc
 
 getRedirectorR :: T.Text -> Handler ()
@@ -277,7 +278,7 @@ getRedirectorR t =
         [] -> notFound
         (_, r):_ -> do
             gets <- reqGetParams `fmap` getRequest
-            redirectParams RedirectPermanent r gets
+            redirectWith status301 (r, gets)
 
 getRawR :: T.Text -> Handler RepHtml
 getRawR t = do

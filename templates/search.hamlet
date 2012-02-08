@@ -1,0 +1,17 @@
+<nav .leftbar>
+    <form method=get>
+        <h2>Search
+        <p>
+            <input type=search placeholder=Search name=q value=#{fromMaybe "" mquery}>
+            \ #
+            <input type=submit value=Search>
+        <h2>Filter
+        $forall (group, labels') <- labels
+            <fieldset>
+                <legend>#{groupName $ entityVal group}
+                $forall Entity labelid label <- labels'
+                    <div>
+                        <input type=checkbox id=label-#{toPathPiece labelid} name=labels value=#{toPathPiece labelid} :isChecked labelid:checked>
+                        <label for=label-#{toPathPiece labelid}>#{labelName label}
+        <input type=submit value=Filter>
+^{results}

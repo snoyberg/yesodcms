@@ -3,7 +3,7 @@
 {-# LANGUAGE CPP #-}
 module Foundation
     ( Cms (..)
-    , CmsRoute (..)
+    , CmsRoute
     , resourcesCms
     , Handler
     , Widget
@@ -14,26 +14,27 @@ module Foundation
     , module Yesod
     , module Settings
     , module Model
-    , StaticRoute (..)
-    , AuthRoute (..)
+    , Route (..)
     , fileTitle
     , fileTitle'
     , defaultLayoutExtraParents
+    , Form
     ) where
 
-import Yesod
+import Yesod hiding (Route (..))
+import Yesod.Core
 import Yesod.Form.Jquery
-import Yesod.Static (Static, base64md5, StaticRoute(..))
+import Yesod.Static
 import Settings.StaticFiles
 import Yesod.Auth
-import Yesod.Auth.BrowserId (authBrowserId')
+import Yesod.Auth.BrowserId (authBrowserId)
 import Yesod.Logger (Logger, logLazyText)
 import Yesod.Default.Config
 import qualified Settings
 import System.Directory
 import qualified Data.ByteString.Lazy as L
 import Database.Persist.GenericSql
-import Settings (hamletFile, cassiusFile, luciusFile, juliusFile, widgetFile)
+import Settings (widgetFile, Extra)
 import Model
 import Control.Monad (unless)
 import Text.Jasmine (minifym)
@@ -51,20 +52,25 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.IORef (IORef)
 import System.Locale (defaultTimeLocale)
 import Data.Time (formatTime)
+import qualified Database.Persist.Store
+import Text.Hamlet (hamletFile)
+import Network.HTTP.Conduit (Manager)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
 -- starts running, such as database connections. Every handler will have
 -- access to the data present here.
 data Cms = Cms
-    { settings :: AppConfig DefaultEnv
+    { settings :: AppConfig DefaultEnv Extra
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
-    , connPool :: Settings.ConnectionPool -- ^ Database connection pool.
+    , connPool :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , formatHandlers :: [FormatHandler Cms]
     , fileStore :: FileStore
     , rawFiles :: Map T.Text ContentType
     , aliases :: IORef [Alias]
+    , persistConfig :: Settings.PersistConfig
+    , httpManager :: Manager
     }
 
 mkMessage "Cms" "messages" "en"
@@ -90,6 +96,8 @@ mkMessage "Cms" "messages" "en"
 -- split these actions into two functions and place them in separate files.
 mkYesodData "Cms" $(parseRoutesFile "config/routes")
 
+type CmsRoute = Route Cms
+
 defaultLayoutExtraParents :: [(Maybe (CmsRoute, [(T.Text, T.Text)]), T.Text)] -> GWidget sub Cms () -> GHandler sub Cms RepHtml
 defaultLayoutExtraParents parents' widget = do
     mmsg <- getMessage
@@ -106,7 +114,7 @@ defaultLayoutExtraParents parents' widget = do
                 mb <- runDB $ selectFirst [] [Desc BlogPosted]
                 case mb of
                     Nothing -> return Nothing
-                    Just (_, b) -> return $ Just [whamlet|
+                    Just (Entity _ b) -> return $ Just [whamlet|
 Last blog post: #
 <a href=@{BlogR}>#{blogTitle b}
 \ #
@@ -125,7 +133,7 @@ Last blog post: #
         $(widgetFile "collapse")
     let asString s = s :: String
     pc' <- widgetToPageContent $(widgetFile "default-layout")
-    hamletToRepHtml $(hamletFile "default-layout-wrapper")
+    hamletToRepHtml $(hamletFile "templates/default-layout-wrapper.hamlet")
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
@@ -173,13 +181,17 @@ instance Yesod Cms where
     maximumContentLength _ (Just UserFileR{}) = 7 * 1024 * 1024 -- 7 megabytes
     maximumContentLength _ _ = 2 * 1024 * 1024 -- 2 megabytes
 
-    gzipCompressFiles _ = True
+    -- FIXME gzipCompressFiles _ = True
 
 -- How to run database actions.
 instance YesodPersist Cms where
     type YesodPersistBackend Cms = SqlPersist
-    runDB f = liftIOHandler
-            $ fmap connPool getYesod >>= Settings.runConnectionPool f
+    runDB f = do
+        master <- getYesod
+        Database.Persist.Store.runPool
+            (persistConfig master)
+            f
+            (connPool master)
 
 instance YesodAuth Cms where
     type AuthId Cms = UserId
@@ -192,7 +204,7 @@ instance YesodAuth Cms where
     getAuthId creds = runDB $ do
         x <- getBy $ UniqueEmail $ credsIdent creds
         case x of
-            Just (uid, _) -> return $ Just uid
+            Just (Entity uid _) -> return $ Just uid
             Nothing -> do
                 handle <- getNextHandle 1
                 fmap Just $ insert $ User (credsIdent creds) Nothing handle False
@@ -202,7 +214,9 @@ instance YesodAuth Cms where
             x <- getBy $ UniqueHandle h
             maybe (return h) (const $ getNextHandle $ i + 1) x
 
-    authPlugins = [authBrowserId']
+    authPlugins _ = [authBrowserId]
+
+    authHttpManager = httpManager
 
 instance RenderMessage Cms FormMessage where
     renderMessage _ _ = defaultFormMessage
@@ -220,7 +234,9 @@ instance YesodAloha Cms where
 instance YesodJquery Cms where
     urlJqueryJs _ = Left $ StaticR jquery_js
 
-fileTitle :: MonadIO m => FileStorePath -> GGHandler sub Cms m T.Text
+type Form x = Html -> MForm Cms Cms (FormResult x, Widget)
+
+fileTitle :: FileStorePath -> GHandler sub Cms T.Text
 fileTitle t = do
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     fileTitle' fs fhs t
@@ -264,11 +280,11 @@ instance YesodBreadcrumbs Cms where
         ma <- runDB $ selectFirst [AliasOrig ==. T.intercalate "/" ("home" : user : x)] []
         case ma of
             Nothing -> return (last x, Just $ UserFileR user $ init x)
-            Just (_, a) -> return (aliasTitle a, Just RootR)
+            Just (Entity _ a) -> return (aliasTitle a, Just RootR)
 
     breadcrumb BlogArchiveR = return ("Blog", Just RootR)
     breadcrumb (BlogPostR year month slug) = do
-        (_, b) <- runDB $ getBy404 $ UniqueBlog year month slug
+        Entity _ b <- runDB $ getBy404 $ UniqueBlog year month slug
         return (blogTitle b, Just BlogArchiveR)
 
     breadcrumb SearchR = return ("Search", Just RootR)
@@ -286,7 +302,6 @@ instance YesodBreadcrumbs Cms where
     breadcrumb ContentFeedItemR{} = return ("", Nothing)
     breadcrumb BlogPostNoDateR{} = return ("", Nothing)
     breadcrumb CreateBlogR{} = return ("", Nothing)
-    breadcrumb SearchXmlpipeR = return ("", Nothing)
     breadcrumb BlogR = return ("", Nothing)
     breadcrumb CreateAliasR{} = return ("", Nothing)
     breadcrumb GroupsR{} = return ("", Nothing)

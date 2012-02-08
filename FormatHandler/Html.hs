@@ -17,7 +17,6 @@ import Yesod.Core
 import Yesod.Form
 import Yesod.Form.Jquery
 import Text.Lucius (lucius)
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
 import Text.Hamlet (shamlet)
 import Data.Maybe (listToMaybe, mapMaybe)
@@ -26,7 +25,7 @@ import qualified Data.Set as Set
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.ByteString.Lazy as L
-import Data.Enumerator (enumList)
+import Data.Conduit.List (sourceList)
 import Text.HTML.TagSoup
 import Control.Arrow ((***))
 import Control.Applicative ((<$>), (<*>))
@@ -51,7 +50,7 @@ titleForm :: RenderMessage master FormMessage
           -> GWidget sub master ()
           -> Maybe T.Text
           -> Html
-          -> Form sub master (FormResult T.Text, GWidget sub master ())
+          -> MForm sub master (FormResult T.Text, GWidget sub master ())
 titleForm field wrap unwrap extraWidget mt =
     (fmap . fmap) (\(a, b) -> (a, b >> extraWidget))
       $ renderTable $ joinTitle unwrap
@@ -66,7 +65,7 @@ htmlFormatHandler = FormatHandler
     , fhName = "HTML"
     , fhForm = titleForm alohaHtmlField id id (return ())
     , fhWidget = widget
-    , fhFilter = Just . enumList 8 . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
+    , fhFilter = Just . sourceList . L.toChunks . TLE.encodeUtf8 . TL.fromStrict . sanitizeBalance . TL.toStrict . TLE.decodeUtf8With lenientDecode
     , fhRefersTo = const $ const $ return []
     , fhTitle = \sm uri -> fmap (fst . splitTitle) $ liftIO $ uriToText sm uri
     , fhFlatWidget = widget
@@ -88,7 +87,7 @@ class YesodAloha a where
 alohaHtmlField :: (YesodAloha master, YesodJquery master) => Field sub master T.Text
 alohaHtmlField = Field
     { fieldParse = return . Right . fmap sanitizeBalance . listToMaybe
-    , fieldView = \theId name val _isReq -> do
+    , fieldView = \theId name _classes val _isReq -> do
         y <- lift getYesod
         addScriptEither $ urlJqueryJs y
         addScriptEither $ urlAloha y

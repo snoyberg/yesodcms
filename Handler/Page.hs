@@ -19,7 +19,7 @@ getPageR x xs = getPageR' $ x:xs
 getPageR' :: [T.Text] -> Handler RepHtml
 getPageR' ts = do
     mu <- maybeAuth
-    let canWrite = fmap (userAdmin . snd) mu == Just True
+    let canWrite = fmap (userAdmin . entityVal) mu == Just True
     Cms { formatHandlers = fhs, fileStore = fs } <- getYesod
     mfile <- liftIO $ findFile "page" ts fs fhs
     case mfile of

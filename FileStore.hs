@@ -3,14 +3,14 @@
 module FileStore where
 
 import Data.ByteString (ByteString)
-import Data.Enumerator (Enumerator, ($$), run_)
-import Data.Enumerator.Binary (enumFile, iterHandle)
+import Data.Conduit (Source (..), ($$), runResourceT, ResourceIO)
+import Data.Conduit.Binary (sourceFile, sinkFile)
 import qualified Data.Text as T
 import Prelude hiding (FilePath)
 import Filesystem.Path.CurrentOS
 import Filesystem
 import Control.Monad (forM, when)
-import Network.URI.Enumerator
+import Network.URI.Conduit
 import qualified Data.Set as Set
 import Control.Monad.IO.Class (liftIO)
 
@@ -18,11 +18,11 @@ type FileStorePath = T.Text
 
 data FileStore = FileStore
     { fsGetFile :: FileStorePath -> IO (Maybe URI)
-    , fsPutFile :: FileStorePath -> Enumerator ByteString IO () -> IO ()
+    , fsPutFile :: FileStorePath -> Source IO ByteString -> IO ()
     , fsDelete :: FileStorePath -> IO ()
     , fsList :: FileStorePath -> IO [(T.Text, Bool)] -- ^ is it a folder?
     , fsMkdir :: FileStorePath -> IO ()
-    , fsSM :: SchemeMap IO
+    , fsSM :: SchemeMap
     , fsFromURI :: URI -> Maybe FileStorePath
     }
 
@@ -40,7 +40,7 @@ simpleFileStore dir = FileStore
     , fsPutFile = \t enum -> do
         let fp = dir </> fromText t
         createTree $ directory fp
-        withFile fp WriteMode $ \h -> run_ $ enum $$ iterHandle h
+        runResourceT $ enum $$ sinkFile (encodeString fp)
     , fsDelete = \t -> do
         let fp = dir </> fromText t
         f <- isFile fp
@@ -63,11 +63,17 @@ simpleFileStore dir = FileStore
     , fsFromURI = \u -> if uriScheme u == "fs:" then Just (uriPath u) else Nothing
     }
 
-tryFiles :: FilePath -> URI -> [T.Text] -> Enumerator ByteString IO a
-tryFiles _ uri [] _ = error $ "File not found: " ++ show (toNetworkURI uri)
-tryFiles dir uri (t:ts) step = do
-    let fp = dir </> fromText t
-    e <- liftIO $ isFile fp
-    if e
-        then enumFile (encodeString fp) step
-        else tryFiles dir uri ts step
+tryFiles :: ResourceIO m => FilePath -> URI -> [T.Text] -> Source m ByteString
+tryFiles _ uri [] = Source
+    { sourcePull = error $ "File not found: " ++ show (toNetworkURI uri)
+    , sourceClose = return ()
+    }
+tryFiles dir uri (t:ts) = Source
+    { sourcePull = do
+        let fp = dir </> fromText t
+        e <- liftIO $ isFile fp
+        sourcePull $ if e
+            then sourceFile (encodeString fp)
+            else tryFiles dir uri ts
+    , sourceClose = return ()
+    }

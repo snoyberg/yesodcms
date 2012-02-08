@@ -35,7 +35,6 @@
 /blog/create/#Text CreateBlogR POST
 
 /search SearchR GET
-/search/xmlpipe SearchXmlpipeR GET
 
 /create-alias CreateAliasR POST
 

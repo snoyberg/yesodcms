@@ -15,6 +15,7 @@ import Yesod.Feed
 import FormatHandler
 import FileStore
 import qualified Data.Text as T
+import Network.HTTP.Types (status301)
 
 blogWidget :: Blog -> Widget
 blogWidget b = do
@@ -31,7 +32,7 @@ getBlogFeedR = do
     r <- getUrlRenderParams
 
     blogs <- runDB $ selectList [] [Desc BlogPosted, LimitTo 3]
-    entries <- mapM (\(_, b) -> do
+    entries <- mapM (\(Entity _ b) -> do
         pc <- widgetToPageContent $ blogWidget b
         return FeedEntry
             { feedEntryLink = BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
@@ -54,7 +55,7 @@ getContentFeedR :: Handler RepAtomRss
 getContentFeedR = do
     now <- liftIO getCurrentTime
 
-    entries <- runDB $ selectList [] [Desc FeedItemCreated, LimitTo 30] >>= (mapM $ \(nid, n) -> return FeedEntry
+    entries <- runDB $ selectList [] [Desc FeedItemCreated, LimitTo 30] >>= (mapM $ \(Entity nid n) -> return FeedEntry
         { feedEntryLink = ContentFeedItemR nid
         , feedEntryUpdated = feedItemCreated n
         , feedEntryTitle = feedItemTitle n
@@ -74,7 +75,7 @@ getContentFeedR = do
 getContentFeedItemR :: FeedItemId -> Handler ()
 getContentFeedItemR fid = do
     f <- runDB $ get404 fid
-    redirectText RedirectPermanent $ feedItemUrl f
+    redirectWith status301 $ feedItemUrl f
 
 addFeedItem :: Text -> CmsRoute -> [(Text, Text)] -> Html -> YesodDB Cms Cms ()
 addFeedItem title route query content = do

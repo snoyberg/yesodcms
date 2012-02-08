@@ -10,6 +10,7 @@ module FormatHandler.DITA
     ) where
 
 import Debug.Trace
+import Network.HTTP.Types (status301)
 import qualified Data.Text as T
 import FormatHandler
 import Text.Lucius (lucius)
@@ -33,20 +34,18 @@ import Yesod.Form
 import qualified Data.Set as Set
 import Text.Hamlet (shamlet)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Class (lift)
 import Data.Maybe (listToMaybe, maybeToList)
 import Text.Blaze (toHtml, Html)
 import Text.Hamlet.XML (xml)
 import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Map as Map
-import Data.Enumerator (Enumerator)
-import qualified Data.Enumerator as E
-import qualified Data.Enumerator.List as EL
+import qualified Data.Conduit as C
+import qualified Data.Conduit.List as CL
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as L
 import qualified DITA.Types as D
 import Data.IORef
-import Network.URI.Enumerator (URI, readURI)
+import Network.URI.Conduit (URI, readURI)
 import qualified Network.HTTP.Types as H
 import Blaze.ByteString.Builder.Char.Utf8 (fromChar, fromText)
 import Data.Monoid (mconcat, mempty, mappend)
@@ -56,6 +55,8 @@ import Network.Wai (rawQueryString, rawPathInfo)
 import Network.HTTP.Types (parseQuery)
 import Data.Char (isUpper)
 import Text.Pandoc (writeHtmlString, defaultWriterOptions, readMarkdown, defaultParserState)
+
+import Control.Exception (try, SomeException)
 
 import qualified Text.Highlighting.Illuminate as I
 import qualified Text.Highlighting.Illuminate.Haskell as Haskell
@@ -89,7 +90,7 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
     , fhToText = \sm uri ->
         if False
             then fmap (either (const Nothing) (Just . plain)) $ runDITA (ditaSettings sm) $ loadTopicTrees uri -- more correct
-            else fmap (either (const Nothing) (Just . TL.toStrict . TB.toLazyText)) $ E.run $ readURI sm uri E.$$ P.parseBytes P.def E.=$ EL.fold plainEvent mempty
+            else fmap (either (const Nothing) (Just . TL.toStrict . TB.toLazyText)) $ try' $ C.runResourceT $ readURI sm uri C.$$ P.parseBytes P.def C.=$ CL.fold plainEvent mempty
     , fhExtraParents = \_ _ -> return []
     }
   where
@@ -99,13 +100,17 @@ ditaFormatHandler renderHref' cache classmap loadFileId = FormatHandler
         , dsGetFileId = Just loadFileId
         , dsStrict = False
         , dsDitaval = def
+        , dsIsPrint = False
         }
     plainEvent :: TB.Builder -> Event -> TB.Builder
     plainEvent b (EventContent (ContentText t)) = b `mappend` TB.fromText t
     plainEvent b _ = b
 
+    try' :: IO a -> IO (Either SomeException a)
+    try' = try
+
     fastTitle sm uri =
-        fmap (either (const Nothing) (Just . fromGTS)) $ E.run $ readURI sm uri E.$$ P.parseBytes P.def E.=$ EL.fold getTitle GTSNothing
+        fmap (either (const Nothing) (Just . fromGTS)) $ try' $ C.runResourceT $ readURI sm uri C.$$ P.parseBytes P.def C.=$ CL.fold getTitle GTSNothing
 
     getTitle :: GetTitleState -> Event -> GetTitleState
     getTitle (GTSFilling b) (EventContent (ContentText t)) = GTSFilling $ b `mappend` TB.fromText t
@@ -187,7 +192,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
                 -- rawQueryString instead.
                 gets <- fmap (filter (\(x, _) -> x /= "topic") . parseQuery . rawQueryString) $ lift waiRequest
                 rpi <- fmap rawPathInfo $ lift waiRequest
-                lift $ redirectText RedirectPermanent $ decodeUtf8 $ toByteString $ mconcat
+                lift $ redirectWith status301 $ decodeUtf8 $ toByteString $ mconcat
                     [ fromByteString rpi
                     , H.renderQueryBuilder True gets
                     , fromChar '#'
@@ -248,6 +253,7 @@ ditamapFormatHandler renderHref' cache classmap loadFileId idocCache toDocRoute 
         , dsGetFileId = Just loadFileId
         , dsStrict = False
         , dsDitaval = def
+        , dsIsPrint = False
         }
 
     --showNavParents :: URI -> NavId -> Doc -> [(Maybe (Route master, [(T.Text, T.Text)]), T.Text)]
@@ -338,7 +344,7 @@ $forall nav <- navChildren nav
 |]
 
 xmlForm :: (RenderMessage master FormMessage, RenderMessage master msg)
-        => FieldSettings msg -> Maybe T.Text -> Html -> Form sub master (FormResult T.Text, GWidget sub master ())
+        => FieldSettings msg -> Maybe T.Text -> Html -> MForm sub master (FormResult T.Text, GWidget sub master ())
 xmlForm fs =
       (fmap . fmap) (\(a, b) -> (fmap unTextarea a, b >> toWidget css))
     . renderTable
@@ -395,7 +401,7 @@ fixIds root = flip evalState (Set.empty, 1 :: Int) $ do
                     then go' used $ i + 1
                     else (id', i)
 
-xmlFilter :: L.ByteString -> Maybe (Enumerator ByteString IO a)
+xmlFilter :: L.ByteString -> Maybe (C.Source IO ByteString)
 xmlFilter lbs =
     case parseLBS def lbs of
         Left{} -> Nothing

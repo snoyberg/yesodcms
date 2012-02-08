@@ -7,14 +7,14 @@
                 <li>
                     <g:plusone>
                 <li>
-                    $maybe u <- mu
-                        _{MsgLoggedInAs $ userEmail $ snd u}
+                    $maybe Entity _ u <- mu
+                        _{MsgLoggedInAs $ userEmail u}
                         \ #
                         <a href=@{ProfileR}>Profile
                         \ #
                         <a href=@{AuthR LogoutR}>_{MsgLogout}
                     $nothing
-                        ^{apLogin authBrowserId' AuthR}
+                        ^{apLogin authBrowserId AuthR}
                 <li>
                     <a href=@{RootR}book>Book
                 <li>

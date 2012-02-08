@@ -10,7 +10,7 @@ import qualified Data.Text as T
 import FormatHandler
 import FileStore
 import Data.Maybe (listToMaybe)
-import Network.URI.Enumerator
+import Network.URI.Conduit
 
 getWikiR :: Texts -> Handler RepHtml
 getWikiR pieces = do

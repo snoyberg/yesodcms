@@ -20,17 +20,17 @@
 $maybe groups <- mgroups
     <h2>Label groups
     <table>
-        $forall group <- groups
+        $forall Entity groupid group <- groups
             <tr>
-                <td>#{groupName $ snd group}
+                <td>#{groupName group}
                 <td>
-                    <form method=post action=@{DeleteGroupR $ fst group}>
+                    <form method=post action=@{DeleteGroupR groupid}>
                         <input type=submit value=Delete group>
                 <td>
-                    <form method=post action=@{UpGroupR $ fst group}>
+                    <form method=post action=@{UpGroupR groupid}>
                         <input type=submit value=Up>
                 <td>
-                    <form method=post action=@{DownGroupR $ fst group}>
+                    <form method=post action=@{DownGroupR groupid}>
                         <input type=submit value=Down>
     <p>
         <form method=post action=@{GroupsR}>
@@ -41,14 +41,14 @@ $maybe groups <- mgroups
 $maybe alllabels <- mlabels
     <h2>Labels
     $forall grouppair <- alllabels
-        $with group <- snd $ fst grouppair, labels <- snd grouppair
+        $with group <- entityVal $ fst grouppair, labels <- snd grouppair
             <table>
                 <caption>#{groupName group}
-                $forall label <- labels
+                $forall Entity labelid label <- labels
                     <tr>
-                        <td>#{labelName $ snd label}
+                        <td>#{labelName label}
                         <td>
-                            <form method=post action=@{DeleteLabelR $ fst label}>
+                            <form method=post action=@{DeleteLabelR labelid}>
                                 <input type=submit value=Delete>
     <p>
         <form method=post action=@{LabelsR}>

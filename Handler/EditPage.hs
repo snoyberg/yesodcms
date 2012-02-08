@@ -13,14 +13,14 @@ import Foundation
 import qualified Data.Text as T
 import FormatHandler
 import FileStore
-import Data.Enumerator (($$), run_, enumList)
-import Data.Enumerator.List (consume)
+import Data.Conduit (($$), runResourceT)
+import Data.Conduit.List (consume, sourceList)
 import qualified Data.ByteString as S
 import Data.Maybe (isJust, mapMaybe)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
-import Network.URI.Enumerator
+import Network.URI.Conduit
 import Control.Monad (unless, forM_, filterM)
 import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
@@ -31,11 +31,11 @@ checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"
 checkPerms ("wiki":_) = return ()
 checkPerms ("page":_) = do
-    (_, u) <- requireAuth
+    Entity _ u <- requireAuth
     unless (userAdmin u) $ permissionDenied "Only admins can edit this page"
 checkPerms ("home":user:_) = do
     uid <- requireAuthId
-    unless (toSinglePiece uid == user) $ permissionDenied "You do not own this page"
+    unless (toPathPiece uid == user) $ permissionDenied "You do not own this page"
 checkPerms _ = permissionDenied "Path not understood"
 
 getEditPageR :: [T.Text] -> Handler RepHtml
@@ -49,11 +49,11 @@ getEditPageR ts = do
     mcontents <- liftIO $
         case mecontents of
             Nothing -> return Nothing
-            Just uri -> fmap (Just . decodeUtf8With lenientDecode . S.concat) $ run_ $ readURI (fsSM fs) uri $$ consume
+            Just uri -> fmap (Just . decodeUtf8With lenientDecode . S.concat) $ runResourceT $ readURI (fsSM fs) uri $$ consume
     ((res, widget), enctype) <- runFormPost $ fhForm fh mcontents
     case res of
         FormSuccess c -> do
-            liftIO $ fsPutFile fs t $ enumList 1 [encodeUtf8 c]
+            liftIO $ fsPutFile fs t $ sourceList [encodeUtf8 c]
             runDB $ do
                 setCanons t
                 addFeedItem "File updated" (RedirectorR t) [] [shamlet|File updated: #{t}|]
@@ -61,8 +61,8 @@ getEditPageR ts = do
         _ -> return ()
     let toView = isJust mcontents || isSucc res
     labels <- runDB getLabels
-    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
-    myLabels <- fmap (map $ fileLabelLabel . snd) $ runDB $ selectList [FileLabelFile ==. fid] []
+    fid <- fmap (either entityKey id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
+    myLabels <- fmap (map $ fileLabelLabel . entityVal) $ runDB $ selectList [FileLabelFile ==. fid] []
     let isChecked = flip elem myLabels
     defaultLayout $(widgetFile "edit-page")
   where
@@ -87,7 +87,7 @@ postEditPageR ts = do
     checkPerms ts
     toDelete <- runInputPost $ iopt textField "delete"
     case toDelete of
-        Just{} -> redirect RedirectTemporary $ DeletePageR ts
+        Just{} -> redirect $ DeletePageR ts
         Nothing -> getEditPageR ts
 
 getDeletePageR, postDeletePageR :: [T.Text] -> Handler RepHtml
@@ -104,7 +104,7 @@ postDeletePageR ts = do
             liftIO $ fsDelete fs t
             setMessage "Page deleted"
             runDB $ addFeedItem "Page deleted" (RedirectorR t) [] [shamlet|Page deleted: #{t}|]
-            redirect RedirectTemporary RootR
+            redirect RootR
         _ -> defaultLayout $(widgetFile "delete-page")
 
 setCanons :: FileStorePath -> YesodDB Cms Cms ()
@@ -136,12 +136,12 @@ postFileLabelsR :: [T.Text] -> Handler ()
 postFileLabelsR ts = do
     checkPerms ts
     let t = T.intercalate "/" ts
-    fid <- fmap (either fst id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
+    fid <- fmap (either entityKey id) $ runDB $ insertBy $ FileName (T.append "fs:" t) Nothing Nothing
     (posts, _) <- runRequestBody
     let isLabelId = fmap (maybe False (const True)) . get
-    lids <- runDB $ filterM isLabelId $ mapMaybe (fromSinglePiece . snd) $ filter (\(x, _) -> x == "labels") posts
+    lids <- runDB $ filterM isLabelId $ mapMaybe (fromPathPiece . snd) $ filter (\(x, _) -> x == "labels") posts
     runDB $ do
         deleteWhere [FileLabelFile ==. fid]
         mapM_ (insert . FileLabel fid) lids
     setMessage "Labels updated"
-    redirect RedirectTemporary $ EditPageR ts
+    redirect $ EditPageR ts

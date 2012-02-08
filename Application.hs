@@ -4,8 +4,8 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Application
-    ( withCms
-    , withDevelAppPort
+    ( getApplication
+    , getApplicationDev
     ) where
 
 import Foundation
@@ -17,15 +17,14 @@ import Yesod.Default.Config
 import Yesod.Default.Main
 import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
-import Data.Dynamic (Dynamic, toDyn)
 import FormatHandler.Html
 import FormatHandler.Text
 import FormatHandler.LHaskell
 import FormatHandler.Markdown
 import FormatHandler.DITA
 import FileStore
-import Network.URI.Enumerator
-import qualified Network.URI.Enumerator.File as File
+import Network.URI.Conduit
+import qualified Network.URI.Conduit.File as File
 import DITA.Util.ClassMap (loadClassMap)
 import Data.DTD.Cache
 import DITA.Types (hrefFile, NavId (..), FileId (..))
@@ -40,12 +39,9 @@ import qualified Data.Text as T
 import Blaze.ByteString.Builder (toByteString)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
+import Network.HTTP.Conduit (newManager, def)
 
-#ifndef WINDOWS
-import qualified System.Posix.Signals as Signal
-import Control.Concurrent (forkIO, killThread)
-import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
-#endif
+import qualified Database.Persist.Store
 
 -- Import all relevant handler modules here.
 import Handler.Root
@@ -72,47 +68,38 @@ getFaviconR = sendFile "image/x-icon" "config/favicon.ico"
 getRobotsR :: Handler RepPlain
 getRobotsR = return $ RepPlain $ toContent ("User-agent: *" :: ByteString)
 
--- This function allocates resources (such as a database connection pool),
--- performs initialization and creates a WAI application. This is also the
--- place to put your migrate statements to have automatic database
--- migrations handled by Yesod.
-withCms :: AppConfig DefaultEnv -> Logger -> (Application -> IO a) -> IO ()
-withCms conf logger f = do
+getApplication :: AppConfig DefaultEnv Extra -> Logger -> IO Application
+getApplication conf logger = do
+    manager <- newManager def
     s <- static Settings.staticDir
-    Settings.withConnectionPool conf $ \p -> do
-        runConnectionPool (runMigration migrateAll) p
-        cm <- File.decodeString "dita/classmap.css"
-        let sm = toSchemeMap [File.fileScheme]
-        classmap <- loadClassMap sm cm
-        cache <- newDTDCacheFile "dita/catalog-dita.xml"
-        let raw = Map.fromList
-                [ ("png", "image/png")
-                , ("gif", "image/gif")
-                , ("jpg", "image/jpeg")
-                , ("jpeg", "image/jpeg")
-                ]
-        idocCache <- newIORef Map.empty
-        ialiases <- runConnectionPool (selectList [] []) p >>= newIORef . map snd
-        let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
-            h = Cms conf logger s p
-                    [ markdownFormatHandler
-                    , htmlFormatHandler
-                    , lhaskellFormatHandler
-                    , textFormatHandler
-                    , ditaFormatHandler renderHref cache classmap (loadFileId p)
-                    , ditamapFormatHandler renderHref cache classmap (loadFileId p) idocCache toDocRoute toNavRoute
-                    ] (simpleFileStore "data") raw ialiases
-#ifdef WINDOWS
-        toWaiApp h >>= f . book ialiases >> return ()
-#else
-        tid <- forkIO $ toWaiApp h >>= f . book ialiases >> return ()
-        flag <- newEmptyMVar
-        _ <- Signal.installHandler Signal.sigINT (Signal.CatchOnce $ do
-            putStrLn "Caught an interrupt"
-            killThread tid
-            putMVar flag ()) Nothing
-        takeMVar flag
-#endif
+    dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
+              Database.Persist.Store.loadConfig >>=
+              Database.Persist.Store.applyEnv
+    p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
+    Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
+    cm <- File.decodeString "dita/classmap.css"
+    let sm = toSchemeMap [File.fileScheme]
+    classmap <- loadClassMap sm cm
+    cache <- newDTDCacheFile "dita/catalog-dita.xml"
+    let raw = Map.fromList
+            [ ("png", "image/png")
+            , ("gif", "image/gif")
+            , ("jpg", "image/jpeg")
+            , ("jpeg", "image/jpeg")
+            ]
+    idocCache <- newIORef Map.empty
+    ialiases <- Database.Persist.Store.runPool dbconf (selectList [] []) p >>= newIORef . map entityVal
+    let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
+        h = Cms conf logger s p
+                [ markdownFormatHandler
+                , htmlFormatHandler
+                , lhaskellFormatHandler
+                , textFormatHandler
+                , ditaFormatHandler renderHref cache classmap (loadFileId dbconf p)
+                , ditamapFormatHandler renderHref cache classmap (loadFileId dbconf p) idocCache toDocRoute toNavRoute
+                ] (simpleFileStore "data") raw ialiases dbconf manager
+    app <- toWaiApp h
+    return $ book ialiases app
 
 book :: IORef [Alias] -> W.Middleware
 book ialiases app req = do
@@ -143,8 +130,13 @@ book ialiases app req = do
     noNav = filter (\(x, _) -> x /= "nav") $ W.queryString req
 
 -- for yesod devel
-withDevelAppPort :: Dynamic
-withDevelAppPort = toDyn $ defaultDevelApp withCms
+getApplicationDev :: IO (Int, Application)
+getApplicationDev =
+    defaultDevelApp loader getApplication
+  where
+    loader = loadConfig (configSettings Development)
+        { csParseExtra = parseExtra
+        }
 
 toDocRoute :: URI -> CmsRoute
 toDocRoute uri = RedirectorR $ uriPath uri
@@ -152,8 +144,8 @@ toDocRoute uri = RedirectorR $ uriPath uri
 toNavRoute :: URI -> NavId -> D.FileId -> D.TopicId -> (CmsRoute, [(T.Text, T.Text)])
 toNavRoute uri (NavId nid) (D.FileId fid) (D.TopicId tid) = (RedirectorR (uriPath uri), [("nav", nid), ("topic", T.concat [fid, "-", tid])])
 
-loadFileId :: Settings.ConnectionPool -> URI -> IO FileId
-loadFileId p uri = flip Settings.runConnectionPool p $ do
+loadFileId :: PersistConfig -> Database.Persist.Store.PersistConfigPool PersistConfig -> URI -> IO FileId
+loadFileId dbconf p uri = flip (Database.Persist.Store.runPool dbconf) p $ do
     let str = T.pack $ show $ toNetworkURI uri
-    fid <- fmap (either fst id) $ insertBy $ FileName str Nothing Nothing
-    return $ FileId $ "file" `T.append` toSinglePiece fid
+    fid <- fmap (either entityKey id) $ insertBy $ FileName str Nothing Nothing
+    return $ FileId $ "file" `T.append` toPathPiece fid

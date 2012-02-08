@@ -18,13 +18,13 @@ import Handler.Feed (blogWidget)
 
 getBlogR :: Handler ()
 getBlogR = do
-    (_, b) <- runDB (selectFirst [] [Desc BlogPosted]) >>= maybe notFound return
-    redirect RedirectTemporary $ BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
+    Entity _ b <- runDB (selectFirst [] [Desc BlogPosted]) >>= maybe notFound return
+    redirect $ BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
 
 getBlogPostNoDateR :: BlogSlugT -> Handler ()
 getBlogPostNoDateR s = do
-    (_, b) <- runDB (selectFirst [BlogSlug ==. s] [Desc BlogPosted]) >>= maybe notFound return
-    redirect RedirectTemporary $ BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
+    Entity _ b <- runDB (selectFirst [BlogSlug ==. s] [Desc BlogPosted]) >>= maybe notFound return
+    redirect $ BlogPostR (blogYear b) (blogMonth b) (blogSlug b)
 
 type Year = Int
 type Archive = [(Year, [(Month, [Entry])])]
@@ -36,7 +36,7 @@ data Entry = Entry
 
 getBlogPostR :: Int -> Month -> BlogSlugT -> Handler RepHtml
 getBlogPostR y m s = do
-    (_, b) <- runDB $ getBy404 $ UniqueBlog y m s
+    Entity _ b <- runDB $ getBy404 $ UniqueBlog y m s
     u <- runDB $ get404 $ blogAuthor b
     let title = blogTitle b
     archive <- getArchive
@@ -67,7 +67,8 @@ prettyMonth (Month i) =
     months = T.words "January February March April May June July August September October November December"
 
 getArchive :: Handler Archive
-getArchive = fmap (map (second hoist) . hoist . map (toTuples . snd)) $ runDB $ selectList [] [Desc BlogPosted]
+getArchive = fmap (map (second hoist) . hoist . map (toTuples . entityVal))
+           $ runDB $ selectList [] [Desc BlogPosted]
 
 getBlogArchiveR :: Handler RepHtml
 getBlogArchiveR = do

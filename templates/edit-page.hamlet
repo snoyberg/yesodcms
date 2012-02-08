@@ -9,14 +9,15 @@
 $if not $ null labels
     <h2>Labels
     <form method=post action=@{FileLabelsR ts}>
-        $forall grouppair <- labels
+        $forall (group, labels') <- labels
             <div .group>
-                <h3>#{groupName $ snd $ fst grouppair}
+                <h3>#{groupName $ entityVal group}
                 <ul>
-                    $forall label <- snd grouppair
+                    $forall le <- labels'
+                      $with labelid <- entityKey le, name <- labelName (entityVal le)
                         <li>
-                            <input id=label-#{toSinglePiece $ fst label} type=checkbox name=labels value=#{toSinglePiece $ fst label} :isChecked $ fst label:checked>
-                            <label for=label-#{toSinglePiece $ fst label}>#{labelName $ snd label}
+                            <input id=label-#{toPathPiece labelid} type=checkbox name=labels value=#{toPathPiece labelid} :isChecked labelid:checked>
+                            <label for=label-#{toPathPiece labelid}>#{name}
         <p>
             <input type=submit value="Update Labels">
 $if toView
