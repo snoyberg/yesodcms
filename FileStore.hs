@@ -3,8 +3,9 @@
 module FileStore where
 
 import Data.ByteString (ByteString)
-import Data.Conduit (Source (..), ($$), runResourceT)
+import Data.Conduit (Source (..), ($$), runResourceT, MonadResource)
 import Data.Conduit.Binary (sourceFile, sinkFile)
+import Data.Conduit.Internal (Pipe(..))
 import qualified Data.Text as T
 import Prelude hiding (FilePath)
 import Filesystem.Path.CurrentOS
@@ -63,17 +64,15 @@ simpleFileStore dir = FileStore
     , fsFromURI = \u -> if uriScheme u == "fs:" then Just (uriPath u) else Nothing
     }
 
-tryFiles :: ResourceIO m => FilePath -> URI -> [T.Text] -> Source m ByteString
-tryFiles _ uri [] = Source
-    { sourcePull = error $ "File not found: " ++ show (toNetworkURI uri)
-    , sourceClose = return ()
-    }
-tryFiles dir uri (t:ts) = Source
-    { sourcePull = do
+tryFiles :: MonadResource m => FilePath -> URI -> [T.Text] -> Source m ByteString
+tryFiles _ uri [] = PipeM work (return ())
+   where
+      work =return $ Done (Just $ error $ "File not found: " ++ show (toNetworkURI uri)) ()
+tryFiles dir uri (t:ts) = PipeM work (return ())
+   where
+      work = do
         let fp = dir </> fromText t
         e <- liftIO $ isFile fp
-        sourcePull $ if e
-            then sourceFile (encodeString fp)
-            else tryFiles dir uri ts
-    , sourceClose = return ()
-    }
+        if e
+            then return sourceFile (encodeString fp)
+            else return tryFiles dir uri ts
