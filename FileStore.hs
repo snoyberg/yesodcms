@@ -3,7 +3,7 @@
 module FileStore where
 
 import Data.ByteString (ByteString)
-import Data.Conduit (Source (..), ($$), runResourceT, ResourceIO)
+import Data.Conduit (Source (..), ($$), runResourceT)
 import Data.Conduit.Binary (sourceFile, sinkFile)
 import qualified Data.Text as T
 import Prelude hiding (FilePath)

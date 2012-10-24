@@ -17,7 +17,7 @@ module Handler.Profile
 import Foundation
 import Control.Applicative ((<$>), (<*>), pure)
 import qualified Data.Text as T
-import Yesod.Goodies.Gravatar
+import Network.Gravatar
 import Data.Monoid (mempty)
 import Control.Monad (unless)
 import Database.Persist.Query.Join hiding (runJoin)

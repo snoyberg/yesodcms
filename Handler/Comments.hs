@@ -14,7 +14,7 @@ import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Data.Text.Lazy (toStrict)
 import System.Locale
-import Yesod.Goodies.Gravatar
+import Network.Gravatar
 import Handler.Feed (addFeedItemText)
 import Data.Maybe (fromMaybe)
 

@@ -31,7 +31,7 @@ import Codec.Archive.Zip
 import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
-import Yesod.Goodies.Gravatar
+import Network.Gravatar
 import Data.Time
 import Network.HTTP.Conduit
 import Data.IORef (writeIORef)

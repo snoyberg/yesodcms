@@ -28,7 +28,6 @@ import Yesod.Static
 import Settings.StaticFiles
 import Yesod.Auth
 import Yesod.Auth.BrowserId (authBrowserId)
-import Yesod.Logger (Logger, logLazyText)
 import Yesod.Default.Config
 import qualified Settings
 import System.Directory

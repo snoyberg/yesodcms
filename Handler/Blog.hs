@@ -7,7 +7,7 @@ module Handler.Blog
     ) where
 
 import Foundation
-import Yesod.Goodies.Gravatar
+import Network.Gravatar
 import Handler.Comments (prettyDateTime)
 import Data.Text (Text)
 import qualified Data.Text as T

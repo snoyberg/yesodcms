@@ -12,23 +12,16 @@ import Foundation
 import Settings
 import Settings.StaticFiles (static)
 import Yesod.Auth
-import Yesod.Logger (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Main
 import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
 import FormatHandler.Html
 import FormatHandler.Text
-import FormatHandler.LHaskell
 import FormatHandler.Markdown
-import FormatHandler.DITA
 import FileStore
 import Network.URI.Conduit
 import qualified Network.URI.Conduit.File as File
-import DITA.Util.ClassMap (loadClassMap)
-import Data.DTD.Cache
-import DITA.Types (hrefFile, NavId (..), FileId (..))
-import qualified DITA.Types as D
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W

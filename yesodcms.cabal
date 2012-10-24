@@ -8,7 +8,7 @@ synopsis:          The greatest Yesod web application ever.
 description:       I'm sure you can say something clever here if you try.
 category:          Web
 stability:         Experimental
-cabal-version:     >= 1.6
+cabal-version:     >= 1.8
 build-type:        Simple
 homepage:          http://yesodcms.yesodweb.com/
 
@@ -52,6 +52,18 @@ library
                      Handler.Blog
                      Handler.Search
     ghc-options:   -Wall -threaded -O0 -Werror
+    extensions: TemplateHaskell
+                QuasiQuotes
+                OverloadedStrings
+                NoImplicitPrelude
+                CPP
+                MultiParamTypeClasses
+                TypeFamilies
+                GADTs
+                GeneralizedNewtypeDeriving
+                FlexibleContexts
+                EmptyDataDecls
+                NoMonomorphismRestriction
 
 executable         yesodcms
     if flag(devel)
@@ -70,63 +82,58 @@ executable         yesodcms
     hs-source-dirs: .
 
     build-depends: base         >= 4       && < 5
-                 , yesod        >= 0.10    && < 0.11
-                 , yesod-core   >= 0.10    && < 0.11
-                 , yesod-auth   >= 0.7.3   && < 0.9
-                 , yesod-static >= 0.10    && < 0.11
-                 , yesod-default < 0.7
+                 , yesod        >= 1.1     && < 1.2
+                 -- , yesod-platform                >= 1.1        && < 1.2
+                 , yesod-core                    >= 1.1.2      && < 1.2
+                 , yesod-auth                    >= 1.1        && < 1.2
+                 , yesod-static                  >= 1.1        && < 1.2
+                 , yesod-default
                  , blaze-html
-                 , yesod-form   >= 0.4
+                 , yesod-form                    >= 1.1        && < 1.2
                  , mime-mail
-                 , clientsession
+                 , clientsession                 >= 0.8        && < 0.9
                  , wai-extra
                  , directory
-                 , bytestring
-                 , text
-                 , persistent
+                 , bytestring                    >= 0.9        && < 0.10
+                 , text                          >= 0.11       && < 0.12
                  , persistent-template
-                 , persistent-postgresql >= 0.8 && < 0.9
+                 , persistent                    >= 1.0        && < 1.1
+                 , persistent-postgresql     >= 1.0        && < 1.1
                  , template-haskell
-                 , hamlet               >= 0.10     && < 0.11
-                 , shakespeare-css      >= 0.10     && < 0.11
-                 , shakespeare-js       >= 0.11     && < 0.12
-                 , shakespeare-text     >= 0.10     && < 0.11
-                 , hjsmin
+                 , hamlet                        >= 1.1        && < 1.2
+                 , shakespeare-css               >= 1.0        && < 1.1
+                 , shakespeare-js                >= 1.0        && < 1.1
+                 , shakespeare-text              >= 1.0        && < 1.1
+                 , hjsmin                        >= 0.1        && < 0.2
                  , transformers
-                 , yaml
-                 , HTTP
-                 , pureMD5
                  , warp
                  , blaze-builder
                  , cmdargs
                  , containers
                  , conduit
                  , system-filepath
-                 , system-fileio == 0.3.3
+                 , system-fileio
                  , xss-sanitize
-                 , uri-conduit          >= 0.2      && < 0.3
-                 , dita
-                 , xml-conduit          >= 0.5      && < 0.6
-                 , xml2html
-                 , xml-catalog          >= 0.5      && < 0.6
-                 , dtd                  >= 0.2      && < 0.3
+                 , uri-conduit
+                 , xml-conduit       >= 1.0.3    && < 1.1
                  , http-types
-                 , xml-hamlet
                  , spoon
                  , zip-archive
                  , time
                  , wai
-                 , aeson-native
+                 , aeson
                  , vector
                  , old-locale
-                 , yesod-newsfeed  < 0.5
+                 , yesod-newsfeed
                  , sphinx
                  , tagsoup
                  , pandoc
-                 , http-conduit
+                 , http-conduit                  >= 1.5        && < 1.7
                  , xml-types
-                 , xhtml
-                 , illuminate
+                 , yaml
+                 , gravatar
+                 , blaze-markup
+                 , data-default
 
     if !os(windows)
          build-depends: unix
