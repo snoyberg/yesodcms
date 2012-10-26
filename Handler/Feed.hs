@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Feed
     ( getBlogFeedR
     , getContentFeedR
@@ -8,14 +7,7 @@ module Handler.Feed
     , blogWidget
     ) where
 
-import Foundation
-import Data.Time (getCurrentTime)
-import Data.Text (Text)
-import Yesod.Feed
-import FormatHandler
-import FileStore
-import qualified Data.Text as T
-import Network.HTTP.Types (status301)
+import Import
 
 blogWidget :: Blog -> Widget
 blogWidget b = do

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
 module FormatHandler.Markdown
     ( markdownFormatHandler
     ) where
@@ -13,9 +11,10 @@ import qualified Data.Set as Set
 import qualified Data.ByteString.Lazy as L
 import Data.Conduit.List (sourceList)
 import Text.Pandoc (writeHtmlString, defaultWriterOptions, readMarkdown, defaultParserState)
-import Text.Blaze (preEscapedString)
+import Text.Blaze.Html (preEscapedToHtml)
 import qualified Data.Text as T
 import FormatHandler.Html (splitTitle, titleForm)
+import Prelude
 
 markdownFormatHandler :: FormatHandler master
 markdownFormatHandler = FormatHandler
@@ -34,4 +33,4 @@ markdownFormatHandler = FormatHandler
     css = [lucius|textarea { width: 500px; height: 400px } |]
     widget sm uri = do
         t <- fmap (snd . splitTitle) $ liftIO $ uriToText sm uri
-        toWidget $ preEscapedString $ writeHtmlString defaultWriterOptions $ readMarkdown defaultParserState $ T.unpack $ T.filter (/= '\r') t
+        toWidget $ preEscapedToHtml $ writeHtmlString defaultWriterOptions $ readMarkdown defaultParserState $ T.unpack $ T.filter (/= '\r') t

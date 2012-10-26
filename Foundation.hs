@@ -1,6 +1,3 @@
-{-# LANGUAGE QuasiQuotes, TemplateHaskell, TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings, MultiParamTypeClasses #-}
-{-# LANGUAGE CPP #-}
 module Foundation
     ( Cms (..)
     , CmsRoute
@@ -21,21 +18,20 @@ module Foundation
     , Form
     ) where
 
-import Yesod hiding (Route (..))
-import Yesod.Core
+import Yesod
 import Yesod.Form.Jquery
+import Prelude
 import Yesod.Static
-import Settings.StaticFiles
 import Yesod.Auth
 import Yesod.Auth.BrowserId (authBrowserId)
 import Yesod.Default.Config
+import Yesod.Default.Util (addStaticContentExternal)
 import qualified Settings
-import System.Directory
-import qualified Data.ByteString.Lazy as L
+import Settings.Development (development)
+import Settings.StaticFiles
 import Database.Persist.GenericSql
-import Settings (widgetFile, Extra)
+import Settings (widgetFile, Extra (..))
 import Model
-import Control.Monad (unless)
 import Text.Jasmine (minifym)
 import qualified Data.Text as T
 import Web.ClientSession (getKey)
@@ -61,7 +57,6 @@ import Network.HTTP.Conduit (Manager)
 -- access to the data present here.
 data Cms = Cms
     { settings :: AppConfig DefaultEnv Extra
-    , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , formatHandlers :: [FormatHandler Cms]
@@ -137,12 +132,13 @@ Last blog post: #
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod Cms where
-    approot = appRoot . settings
+    approot = ApprootMaster $ appRoot . settings
 
-    clientSessionDuration _ = 60 * 24 * 14
-
-    -- Place the session key file in the config folder
-    encryptKey _ = fmap Just $ getKey "config/client_session_key.aes"
+    -- Store session data on the client in encrypted cookies,
+    -- default session idle timeout is 120 minutes
+    makeSessionBackend _ = do
+        key <- getKey "config/client_session_key.aes"
+        return . Just $ clientSessionBackend key 120
 
     defaultLayout = defaultLayoutExtraParents []
 
@@ -155,30 +151,22 @@ instance Yesod Cms where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    messageLogger y loc level msg =
-      formatLogMessage loc level msg >>= logLazyText (getLogger y)
-
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
     -- users receiving stale content.
-    addStaticContent ext' _ content = do
-        let fn = base64md5 content ++ '.' : T.unpack ext'
-        let content' =
-                if ext' == "js"
-                    then case minifym content of
-                            Left _ -> content
-                            Right y -> y
-                    else content
-        let statictmp = Settings.staticDir ++ "/tmp/"
-        liftIO $ createDirectoryIfMissing True statictmp
-        let fn' = statictmp ++ fn
-        exists <- liftIO $ doesFileExist fn'
-        unless exists $ liftIO $ L.writeFile fn' content'
-        return $ Just $ Right (StaticR $ StaticRoute ["tmp", T.pack fn] [], [])
+    addStaticContent = addStaticContentExternal minifym base64md5 Settings.staticDir (StaticR . flip StaticRoute [])
 
     maximumContentLength _ (Just UserFileR{}) = 7 * 1024 * 1024 -- 7 megabytes
     maximumContentLength _ _ = 2 * 1024 * 1024 -- 2 megabytes
+
+    -- Place Javascript at bottom of the body tag so the rest of the page loads first
+    jsLoader _ = BottomOfBody
+
+    -- What messages should be logged. The following includes all messages when
+    -- in development, and warnings and errors in production.
+    shouldLog _ _source level =
+        development || level == LevelWarn || level == LevelError
 
     -- FIXME gzipCompressFiles _ = True
 
@@ -232,6 +220,10 @@ instance YesodAloha Cms where
 
 instance YesodJquery Cms where
     urlJqueryJs _ = Left $ StaticR jquery_js
+
+-- | Get the 'Extra' value, used to hold data from the settings.yml file.
+getExtra :: Handler Extra
+getExtra = fmap (appExtra . settings) getYesod
 
 type Form x = Html -> MForm Cms Cms (FormResult x, Widget)
 

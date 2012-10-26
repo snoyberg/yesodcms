@@ -1,16 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Application
     ( getApplication
     , getApplicationDev
     ) where
 
-import Foundation
-import Settings
-import Settings.StaticFiles (static)
+import Import
 import Yesod.Auth
 import Yesod.Default.Config
 import Yesod.Default.Main

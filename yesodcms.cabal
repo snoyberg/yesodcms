@@ -12,25 +12,18 @@ cabal-version:     >= 1.8
 build-type:        Simple
 homepage:          http://yesodcms.yesodweb.com/
 
-Flag production
-    Description:   Build the production executable.
+Flag dev
+    Description:   Turn on development settings, like auto-reload templates.
     Default:       False
 
-Flag devel
+Flag library-only
     Description:   Build for use with "yesod devel"
     Default:       False
 
 library
-    if flag(devel)
-        Buildable: True
-    else
-        Buildable: False
-
-    if os(windows)
-        cpp-options: -DWINDOWS
-
     hs-source-dirs: .
     exposed-modules: Application
+                     Import
     other-modules:   Foundation
                      Model
                      Settings
@@ -39,7 +32,6 @@ library
                      FormatHandler.Text
                      FormatHandler.Markdown
                      FormatHandler.Html
-                     FormatHandler.DITA
                      FileStore
                      Handler.Root
                      Handler.Wiki
@@ -51,7 +43,13 @@ library
                      Handler.Feed
                      Handler.Blog
                      Handler.Search
-    ghc-options:   -Wall -threaded -O0 -Werror
+    if flag(dev) || flag(library-only)
+        cpp-options:   -DDEVELOPMENT
+        ghc-options:   -Wall -O0
+    else
+        ghc-options:   -Wall -O2 -threaded
+    if os(windows)
+        cpp-options: -DWINDOWS
     extensions: TemplateHaskell
                 QuasiQuotes
                 OverloadedStrings
@@ -64,23 +62,6 @@ library
                 FlexibleContexts
                 EmptyDataDecls
                 NoMonomorphismRestriction
-
-executable         yesodcms
-    if flag(devel)
-        Buildable: False
-
-    if flag(production)
-        cpp-options:   -DPRODUCTION
-        ghc-options:   -Wall -threaded -O2
-    else
-        ghc-options:   -Wall -threaded -O0 -Werror
-
-    if os(windows)
-        cpp-options: -DWINDOWS
-
-    main-is:       main.hs
-    hs-source-dirs: .
-
     build-depends: base         >= 4       && < 5
                  , yesod        >= 1.1     && < 1.2
                  -- , yesod-platform                >= 1.1        && < 1.2
@@ -137,3 +118,28 @@ executable         yesodcms
 
     if !os(windows)
          build-depends: unix
+
+executable         yesodcms
+    if flag(library-only)
+        Buildable: False
+
+    main-is:           main.hs
+    hs-source-dirs:    .
+    build-depends:     base
+                     , yesodcms
+                     , yesod-default
+
+    ghc-options:       -threaded -O2
+test-suite test
+    type:              exitcode-stdio-1.0
+    main-is:           main.hs
+    hs-source-dirs:    tests
+    ghc-options:       -Wall
+
+    build-depends: base
+                 , yesodcms
+                 , yesod-test
+                 , yesod-default
+                 , yesod-core
+                 , persistent                    >= 1.0        && < 1.1
+                 , persistent-postgresql     >= 1.0        && < 1.1

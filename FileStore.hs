@@ -1,5 +1,3 @@
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE OverloadedStrings #-}
 module FileStore where
 
 import Data.ByteString (ByteString)

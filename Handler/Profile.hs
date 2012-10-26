@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Profile
     ( getProfileR
     , postProfileR
@@ -14,11 +13,10 @@ module Handler.Profile
     , getLabels
     ) where
 
-import Foundation
-import Control.Applicative ((<$>), (<*>), pure)
+import Import
 import qualified Data.Text as T
+import Data.Default(Default(..))
 import Network.Gravatar
-import Data.Monoid (mempty)
 import Control.Monad (unless)
 import Database.Persist.Query.Join hiding (runJoin)
 import Database.Persist.Query.Join.Sql (runJoin)
@@ -68,7 +66,7 @@ getProfileR = do
             redirect ProfileR
         _ -> defaultLayout $(widgetFile "profile")
   where
-    opts = defaultOptions
+    opts = def
         { gDefault = Just Identicon
         , gSize = Just $ Size 160
         }

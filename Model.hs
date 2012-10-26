@@ -1,12 +1,12 @@
-{-# LANGUAGE QuasiQuotes, TypeFamilies, GeneralizedNewtypeDeriving, TemplateHaskell, GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Model where
 
+import Prelude
 import Yesod
 import Data.Text (Text, pack)
 import FileStore (FileStorePath)
 import Data.Time (UTCTime)
 import Text.Hamlet (shamlet)
+import Database.Persist.Quasi
 
 newtype BlogSlugT = BlogSlugT Text
     deriving (Read, Eq, Show, PersistField, PathPiece, Ord)
@@ -22,7 +22,7 @@ instance PathPiece Month where
             then Just $ Month i
             else Nothing
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] $(persistFile "config/models")
+share [mkPersist sqlSettings, mkMigrate "migrateAll"] $(persistFileWith lowerCaseSettings "config/models")
 
 userDisplayName :: User -> Html
 userDisplayName u = [shamlet|

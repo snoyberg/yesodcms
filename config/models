@@ -45,10 +45,12 @@ Group
     name Text
     priority Int
     UniqueGroup name
+    deriving
 Label
     group GroupId
     name Text
     UniqueLabel group name
+    deriving
 FileLabel
     file FileNameId
     label LabelId
