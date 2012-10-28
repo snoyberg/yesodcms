@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.EditPage
     ( getEditPageR
     , postEditPageR
@@ -9,7 +8,7 @@ module Handler.EditPage
     , postDeletePageR
     ) where
 
-import Foundation
+import Import
 import qualified Data.Text as T
 import FormatHandler
 import FileStore
@@ -25,7 +24,7 @@ import Control.Monad (unless, forM_, filterM)
 import Handler.Feed (addFeedItem)
 import Text.Hamlet (shamlet)
 import Handler.Profile (getLabels)
-import Control.Applicative (pure)
+import Prelude (last, init)
 
 checkPerms :: [T.Text] -> Handler ()
 checkPerms [] = permissionDenied "Cannot edit page"

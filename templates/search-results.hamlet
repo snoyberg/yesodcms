@@ -6,4 +6,4 @@
                 <a href=@{RedirectorR $ miFile mi} data-raw=@{RawR $ miFile mi}>
                     #{miTitle mi}
             <div .excerpt>
-                \#{preEscapedLazyText $ miExcerpt mi}
+                \#{preEscapedToHtml $ miExcerpt mi}

@@ -13,19 +13,17 @@ import FormatHandler.Html
 import FormatHandler.Text
 import FormatHandler.Markdown
 import FileStore
-import Network.URI.Conduit
-import qualified Network.URI.Conduit.File as File
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W
 import Data.Text.Encoding (encodeUtf8)
 import Control.Monad (join)
 import qualified Network.HTTP.Types as H
-import qualified Data.Text as T
 import Blaze.ByteString.Builder (toByteString)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.HTTP.Conduit (newManager, def)
+import qualified Settings
 
 import qualified Database.Persist.Store
 
@@ -54,10 +52,10 @@ getFaviconR = sendFile "image/x-icon" "config/favicon.ico"
 getRobotsR :: Handler RepPlain
 getRobotsR = return $ RepPlain $ toContent ("User-agent: *" :: ByteString)
 
-getApplication :: AppConfig DefaultEnv Extra -> Logger -> IO Application
-getApplication conf logger = do
+getApplication :: AppConfig DefaultEnv Extra -> IO Application
+getApplication conf = do
     manager <- newManager def
-    s <- static Settings.staticDir
+    s <- staticSite
     dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
               Database.Persist.Store.loadConfig >>=
               Database.Persist.Store.applyEnv

@@ -24,9 +24,9 @@ library
     hs-source-dirs: .
     exposed-modules: Application
                      Import
+                     Settings
     other-modules:   Foundation
                      Model
-                     Settings
                      Settings.StaticFiles
                      FormatHandler
                      FormatHandler.Text
@@ -69,7 +69,7 @@ library
                  , yesod-auth                    >= 1.1        && < 1.2
                  , yesod-static                  >= 1.1        && < 1.2
                  , yesod-default
-                 , blaze-html
+                 , blaze-html                    >= 0.5        && < 0.6
                  , yesod-form                    >= 1.1        && < 1.2
                  , mime-mail
                  , clientsession                 >= 0.8        && < 0.9
@@ -113,18 +113,15 @@ library
                  , xml-types
                  , yaml
                  , gravatar
-                 , blaze-markup
+                 , blaze-markup                  >= 0.5        && < 0.6
                  , data-default
-
-    if !os(windows)
-         build-depends: unix
 
 executable         yesodcms
     if flag(library-only)
         Buildable: False
 
-    main-is:           main.hs
-    hs-source-dirs:    .
+    main-is:           ../main.hs
+    hs-source-dirs:    dist 
     build-depends:     base
                      , yesodcms
                      , yesod-default
