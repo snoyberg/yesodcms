@@ -61,26 +61,17 @@ getApplication conf = do
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
     Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
-    cm <- File.decodeString "dita/classmap.css"
-    let sm = toSchemeMap [File.fileScheme]
-    classmap <- loadClassMap sm cm
-    cache <- newDTDCacheFile "dita/catalog-dita.xml"
     let raw = Map.fromList
             [ ("png", "image/png")
             , ("gif", "image/gif")
             , ("jpg", "image/jpeg")
             , ("jpeg", "image/jpeg")
             ]
-    idocCache <- newIORef Map.empty
     ialiases <- Database.Persist.Store.runPool dbconf (selectList [] []) p >>= newIORef . map entityVal
-    let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
-        h = Cms conf logger s p
+    let h = Cms conf s p
                 [ markdownFormatHandler
                 , htmlFormatHandler
-                , lhaskellFormatHandler
                 , textFormatHandler
-                , ditaFormatHandler renderHref cache classmap (loadFileId dbconf p)
-                , ditamapFormatHandler renderHref cache classmap (loadFileId dbconf p) idocCache toDocRoute toNavRoute
                 ] (simpleFileStore "data") raw ialiases dbconf manager
     app <- toWaiApp h
     return $ book ialiases app
@@ -121,15 +112,3 @@ getApplicationDev =
     loader = loadConfig (configSettings Development)
         { csParseExtra = parseExtra
         }
-
-toDocRoute :: URI -> CmsRoute
-toDocRoute uri = RedirectorR $ uriPath uri
-
-toNavRoute :: URI -> NavId -> D.FileId -> D.TopicId -> (CmsRoute, [(T.Text, T.Text)])
-toNavRoute uri (NavId nid) (D.FileId fid) (D.TopicId tid) = (RedirectorR (uriPath uri), [("nav", nid), ("topic", T.concat [fid, "-", tid])])
-
-loadFileId :: PersistConfig -> Database.Persist.Store.PersistConfigPool PersistConfig -> URI -> IO FileId
-loadFileId dbconf p uri = flip (Database.Persist.Store.runPool dbconf) p $ do
-    let str = T.pack $ show $ toNetworkURI uri
-    fid <- fmap (either entityKey id) $ insertBy $ FileName str Nothing Nothing
-    return $ FileId $ "file" `T.append` toPathPiece fid
