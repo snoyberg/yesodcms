@@ -1,7 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE QuasiQuotes #-}
 module FormatHandler
     ( FormatHandler (..)
     , uriToText
@@ -12,7 +9,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Yesod.Core
 import Yesod.Form
-import Text.Blaze (Html)
+import Text.Blaze.Html (Html)
 import Data.Conduit
 import Data.Conduit.List (consume)
 import qualified Data.ByteString as S
@@ -21,6 +18,8 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Network.URI.Conduit
 import Control.Monad (liftM)
 import qualified Data.ByteString.Lazy as L
+import Data.Maybe
+import Prelude
 
 data FormatHandler master = FormatHandler
     { fhExts :: Set.Set Ext
@@ -37,7 +36,7 @@ data FormatHandler master = FormatHandler
 
 type Ext = T.Text
 
-uriToText :: ResourceIO m => SchemeMap -> URI -> m T.Text
+-- uriToText :: MonadResource m => SchemeMap -> URI -> m T.Text
 uriToText sm uri = liftM (decodeUtf8With lenientDecode . S.concat) $ runResourceT $ readURI sm uri $$ consume
 
 findHandler :: Ext -> [FormatHandler m] -> Maybe (FormatHandler m)

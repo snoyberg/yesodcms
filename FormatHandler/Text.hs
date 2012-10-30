@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
 module FormatHandler.Text
     ( textFormatHandler
     ) where
@@ -14,6 +12,7 @@ import Text.Hamlet (shamlet)
 import qualified Data.ByteString.Lazy as L
 import Data.Conduit.List (sourceList)
 import FormatHandler.Html (splitTitle, titleForm)
+import Prelude
 
 textFormatHandler :: FormatHandler master
 textFormatHandler = FormatHandler

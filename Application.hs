@@ -1,45 +1,29 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Application
     ( getApplication
     , getApplicationDev
     ) where
 
-import Foundation
-import Settings
-import Settings.StaticFiles (static)
+import Import
 import Yesod.Auth
-import Yesod.Logger (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Main
 import Database.Persist.GenericSql
 import Data.ByteString (ByteString)
 import FormatHandler.Html
 import FormatHandler.Text
-import FormatHandler.LHaskell
 import FormatHandler.Markdown
-import FormatHandler.DITA
 import FileStore
-import Network.URI.Conduit
-import qualified Network.URI.Conduit.File as File
-import DITA.Util.ClassMap (loadClassMap)
-import Data.DTD.Cache
-import DITA.Types (hrefFile, NavId (..), FileId (..))
-import qualified DITA.Types as D
 import qualified Data.Map as Map
 import Data.IORef
 import qualified Network.Wai as W
 import Data.Text.Encoding (encodeUtf8)
 import Control.Monad (join)
 import qualified Network.HTTP.Types as H
-import qualified Data.Text as T
 import Blaze.ByteString.Builder (toByteString)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import Network.HTTP.Conduit (newManager, def)
+import qualified Settings
 
 import qualified Database.Persist.Store
 
@@ -68,35 +52,26 @@ getFaviconR = sendFile "image/x-icon" "config/favicon.ico"
 getRobotsR :: Handler RepPlain
 getRobotsR = return $ RepPlain $ toContent ("User-agent: *" :: ByteString)
 
-getApplication :: AppConfig DefaultEnv Extra -> Logger -> IO Application
-getApplication conf logger = do
+getApplication :: AppConfig DefaultEnv Extra -> IO Application
+getApplication conf = do
     manager <- newManager def
-    s <- static Settings.staticDir
+    s <- staticSite
     dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
               Database.Persist.Store.loadConfig >>=
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
     Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
-    cm <- File.decodeString "dita/classmap.css"
-    let sm = toSchemeMap [File.fileScheme]
-    classmap <- loadClassMap sm cm
-    cache <- newDTDCacheFile "dita/catalog-dita.xml"
     let raw = Map.fromList
             [ ("png", "image/png")
             , ("gif", "image/gif")
             , ("jpg", "image/jpeg")
             , ("jpeg", "image/jpeg")
             ]
-    idocCache <- newIORef Map.empty
     ialiases <- Database.Persist.Store.runPool dbconf (selectList [] []) p >>= newIORef . map entityVal
-    let renderHref = flip (yesodRender h) [] . RedirectorR . uriPath . hrefFile
-        h = Cms conf logger s p
+    let h = Cms conf s p
                 [ markdownFormatHandler
                 , htmlFormatHandler
-                , lhaskellFormatHandler
                 , textFormatHandler
-                , ditaFormatHandler renderHref cache classmap (loadFileId dbconf p)
-                , ditamapFormatHandler renderHref cache classmap (loadFileId dbconf p) idocCache toDocRoute toNavRoute
                 ] (simpleFileStore "data") raw ialiases dbconf manager
     app <- toWaiApp h
     return $ book ialiases app
@@ -137,15 +112,3 @@ getApplicationDev =
     loader = loadConfig (configSettings Development)
         { csParseExtra = parseExtra
         }
-
-toDocRoute :: URI -> CmsRoute
-toDocRoute uri = RedirectorR $ uriPath uri
-
-toNavRoute :: URI -> NavId -> D.FileId -> D.TopicId -> (CmsRoute, [(T.Text, T.Text)])
-toNavRoute uri (NavId nid) (D.FileId fid) (D.TopicId tid) = (RedirectorR (uriPath uri), [("nav", nid), ("topic", T.concat [fid, "-", tid])])
-
-loadFileId :: PersistConfig -> Database.Persist.Store.PersistConfigPool PersistConfig -> URI -> IO FileId
-loadFileId dbconf p uri = flip (Database.Persist.Store.runPool dbconf) p $ do
-    let str = T.pack $ show $ toNetworkURI uri
-    fid <- fmap (either entityKey id) $ insertBy $ FileName str Nothing Nothing
-    return $ FileId $ "file" `T.append` toPathPiece fid

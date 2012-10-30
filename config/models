@@ -40,16 +40,18 @@ Alias
     slug Text
     title Text
     UniqueAlias slug
-
 Group
     name Text
     priority Int
     UniqueGroup name
+    deriving Eq Show
 Label
     group GroupId
     name Text
     UniqueLabel group name
+    deriving Show
 FileLabel
     file FileNameId
     label LabelId
     UniqueFileLabel file label
+    deriving Show

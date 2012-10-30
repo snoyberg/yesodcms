@@ -1,16 +1,16 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Wiki
     ( getWikiR
     , findFile
     ) where
 
-import Foundation
+import Import
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import FormatHandler
 import FileStore
 import Data.Maybe (listToMaybe)
-import Network.URI.Conduit
+import Network.URI.Conduit (URI)
+
 
 getWikiR :: Texts -> Handler RepHtml
 getWikiR pieces = do

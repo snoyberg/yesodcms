@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Feed
     ( getBlogFeedR
     , getContentFeedR
@@ -8,13 +7,12 @@ module Handler.Feed
     , blogWidget
     ) where
 
-import Foundation
-import Data.Time (getCurrentTime)
-import Data.Text (Text)
-import Yesod.Feed
-import FormatHandler
+import Import
 import FileStore
+import FormatHandler
 import qualified Data.Text as T
+import Yesod.AtomFeed
+import Data.Time.Clock (getCurrentTime)
 import Network.HTTP.Types (status301)
 
 blogWidget :: Blog -> Widget
@@ -26,7 +24,7 @@ blogWidget b = do
         (Just fh, Just uri) -> fhFlatWidget fh (fsSM fs) uri
         _ -> [whamlet|<p>Format handler not found for #{blogContents b}|]
 
-getBlogFeedR :: Handler RepAtomRss
+getBlogFeedR :: Handler RepAtom
 getBlogFeedR = do
     now <- liftIO getCurrentTime
     r <- getUrlRenderParams
@@ -41,7 +39,7 @@ getBlogFeedR = do
             , feedEntryContent = pageBody pc r
             }) blogs
 
-    newsFeed Feed
+    atomFeed Feed
         { feedTitle = "Yesod Wiki" -- FIXME
         , feedLinkSelf = BlogFeedR
         , feedLinkHome = RootR
@@ -51,7 +49,7 @@ getBlogFeedR = do
         , feedEntries = entries
         }
 
-getContentFeedR :: Handler RepAtomRss
+getContentFeedR :: Handler RepAtom
 getContentFeedR = do
     now <- liftIO getCurrentTime
 
@@ -62,7 +60,7 @@ getContentFeedR = do
         , feedEntryContent = feedItemContent n
         })
 
-    newsFeed Feed
+    atomFeed Feed
         { feedTitle = "Yesod Wiki" -- FIXME
         , feedLinkSelf = ContentFeedR
         , feedLinkHome = RootR

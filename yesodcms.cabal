@@ -8,38 +8,30 @@ synopsis:          The greatest Yesod web application ever.
 description:       I'm sure you can say something clever here if you try.
 category:          Web
 stability:         Experimental
-cabal-version:     >= 1.6
+cabal-version:     >= 1.8
 build-type:        Simple
 homepage:          http://yesodcms.yesodweb.com/
 
-Flag production
-    Description:   Build the production executable.
+Flag dev
+    Description:   Turn on development settings, like auto-reload templates.
     Default:       False
 
-Flag devel
+Flag library-only
     Description:   Build for use with "yesod devel"
     Default:       False
 
 library
-    if flag(devel)
-        Buildable: True
-    else
-        Buildable: False
-
-    if os(windows)
-        cpp-options: -DWINDOWS
-
     hs-source-dirs: .
     exposed-modules: Application
+                     Import
+                     Settings
     other-modules:   Foundation
                      Model
-                     Settings
                      Settings.StaticFiles
                      FormatHandler
                      FormatHandler.Text
                      FormatHandler.Markdown
                      FormatHandler.Html
-                     FormatHandler.DITA
                      FileStore
                      Handler.Root
                      Handler.Wiki
@@ -51,82 +43,100 @@ library
                      Handler.Feed
                      Handler.Blog
                      Handler.Search
-    ghc-options:   -Wall -threaded -O0 -Werror
-
-executable         yesodcms
-    if flag(devel)
-        Buildable: False
-
-    if flag(production)
-        cpp-options:   -DPRODUCTION
-        ghc-options:   -Wall -threaded -O2
+    if flag(dev) || flag(library-only)
+        cpp-options:   -DDEVELOPMENT
+        ghc-options:   -Wall -O0
     else
-        ghc-options:   -Wall -threaded -O0 -Werror
-
+        ghc-options:   -Wall -O2 -threaded
     if os(windows)
         cpp-options: -DWINDOWS
-
-    main-is:       main.hs
-    hs-source-dirs: .
-
+    extensions: TemplateHaskell
+                QuasiQuotes
+                OverloadedStrings
+                NoImplicitPrelude
+                CPP
+                MultiParamTypeClasses
+                TypeFamilies
+                GADTs
+                GeneralizedNewtypeDeriving
+                FlexibleContexts
+                EmptyDataDecls
+                NoMonomorphismRestriction
     build-depends: base         >= 4       && < 5
-                 , yesod        >= 0.10    && < 0.11
-                 , yesod-core   >= 0.10    && < 0.11
-                 , yesod-auth   >= 0.7.3   && < 0.9
-                 , yesod-static >= 0.10    && < 0.11
-                 , yesod-default < 0.7
-                 , blaze-html
-                 , yesod-form   >= 0.4
+                 , yesod        >= 1.1     && < 1.2
+                 -- , yesod-platform                >= 1.1        && < 1.2
+                 , yesod-core                    >= 1.1.2      && < 1.2
+                 , yesod-auth                    >= 1.1        && < 1.2
+                 , yesod-static                  >= 1.1        && < 1.2
+                 , yesod-default
+                 , blaze-html                    >= 0.5        && < 0.6
+                 , yesod-form                    >= 1.1        && < 1.2
                  , mime-mail
-                 , clientsession
+                 , clientsession                 >= 0.8        && < 0.9
                  , wai-extra
                  , directory
-                 , bytestring
-                 , text
-                 , persistent
+                 , bytestring                    >= 0.9        && < 0.10
+                 , text                          >= 0.11       && < 0.12
                  , persistent-template
-                 , persistent-postgresql >= 0.8 && < 0.9
+                 , persistent                    >= 1.0        && < 1.1
+                 , persistent-postgresql     >= 1.0        && < 1.1
                  , template-haskell
-                 , hamlet               >= 0.10     && < 0.11
-                 , shakespeare-css      >= 0.10     && < 0.11
-                 , shakespeare-js       >= 0.11     && < 0.12
-                 , shakespeare-text     >= 0.10     && < 0.11
-                 , hjsmin
+                 , hamlet                        >= 1.1        && < 1.2
+                 , shakespeare-css               >= 1.0        && < 1.1
+                 , shakespeare-js                >= 1.0        && < 1.1
+                 , shakespeare-text              >= 1.0        && < 1.1
+                 , hjsmin                        >= 0.1        && < 0.2
                  , transformers
-                 , yaml
-                 , HTTP
-                 , pureMD5
                  , warp
                  , blaze-builder
                  , cmdargs
                  , containers
                  , conduit
                  , system-filepath
-                 , system-fileio == 0.3.3
+                 , system-fileio
                  , xss-sanitize
-                 , uri-conduit          >= 0.2      && < 0.3
-                 , dita
-                 , xml-conduit          >= 0.5      && < 0.6
-                 , xml2html
-                 , xml-catalog          >= 0.5      && < 0.6
-                 , dtd                  >= 0.2      && < 0.3
+                 , uri-conduit
+                 , xml-conduit       >= 1.0.3    && < 1.1
                  , http-types
-                 , xml-hamlet
                  , spoon
                  , zip-archive
                  , time
                  , wai
-                 , aeson-native
+                 , aeson
                  , vector
                  , old-locale
-                 , yesod-newsfeed  < 0.5
+                 , yesod-newsfeed
                  , sphinx
                  , tagsoup
                  , pandoc
-                 , http-conduit
+                 , http-conduit                  >= 1.5        && < 1.7
                  , xml-types
-                 , xhtml
-                 , illuminate
+                 , yaml
+                 , gravatar
+                 , blaze-markup                  >= 0.5        && < 0.6
+                 , data-default
 
-    if !os(windows)
-         build-depends: unix
+executable         yesodcms
+    if flag(library-only)
+        Buildable: False
+
+    main-is:           ../main.hs
+    hs-source-dirs:    dist 
+    build-depends:     base
+                     , yesodcms
+                     , yesod-default
+
+    ghc-options:       -threaded -O2
+test-suite test
+    type:              exitcode-stdio-1.0
+    main-is:           main.hs
+    hs-source-dirs:    tests
+    ghc-options:       -Wall
+
+    build-depends: base
+                 , yesodcms
+                 , yesod-test
+                 , yesod-default
+                 , yesod-core
+                 , persistent                    >= 1.0        && < 1.1
+                 , persistent-postgresql     >= 1.0        && < 1.1

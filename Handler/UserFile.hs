@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings, NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Handler.UserFile
     ( getUsersR
     , getUserFileIntR
@@ -10,20 +10,18 @@ module Handler.UserFile
     , postCreateAliasR
     ) where
 
-import Foundation
+import Import
 import qualified Data.Text as T
-import Data.Monoid (mempty)
 import FileStore
 import FormatHandler
 import Control.Monad (unless)
-import Control.Applicative ((<$>), (<*>))
 import qualified Data.Set as Set
 import Data.Maybe (listToMaybe, isJust)
 import Handler.EditPage (routes, setCanons)
-import Network.HTTP.Types (decodePathSegments, status301)
+import Network.HTTP.Types (status301, decodePathSegments)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Map as Map
-import Data.Conduit (($=), Flush (Chunk))
+import Data.Conduit (($=), ($$), Flush (Chunk))
 import qualified Data.Conduit.List as CL
 import Blaze.ByteString.Builder (fromByteString)
 import Network.URI.Conduit (readURI)
@@ -31,17 +29,17 @@ import Codec.Archive.Zip
 import Control.Spoon (spoon)
 import Control.Monad.Trans.Writer (tell, execWriterT)
 import qualified Data.ByteString.Lazy as L
-import Yesod.Goodies.Gravatar
-import Data.Time
+import Network.Gravatar
 import Network.HTTP.Conduit
 import Data.IORef (writeIORef)
+import Data.Time (getCurrentTime, toGregorian, utctDay)
 
 getUsersR :: Handler RepHtml
 getUsersR = do
     users <- runDB $ fmap (map entityVal) $ selectList [] [Asc UserHandle]
     defaultLayout $(widgetFile "users")
   where
-    opts = defaultOptions
+    opts = def
         { gSize = Just $ Size 80
         , gDefault = Just Identicon
         }
@@ -231,7 +229,9 @@ postUserFileR user ts = do
                             y <- getYesod
                             res <- lift $ httpLbs req $ httpManager y -- FIXME put in some DoS prevention
                             uploadZipLbs uid fs fhs rfs $ responseBody res
-        Just fi -> uploadZipLbs uid fs fhs rfs $ fileContent fi
+        Just fi -> do
+                  fc <- lift $ fileContent fi
+                  uploadZipLbs uid fs fhs rfs fc
   where
     uploadZipLbs uid fs fhs rfs lbs = do
         -- zip-archive uses async exceptions... oh joy
@@ -271,6 +271,9 @@ postUserFileR user ts = do
             Just{} -> do
                 liftIO $ fsPutFile fs t $ CL.sourceList $ L.toChunks lbs
                 onSucc
+    fileContent f = L.fromChunks <$> (fileSource f $$ CL.consume)
+
+
 
 getRedirectorR :: T.Text -> Handler ()
 getRedirectorR t =

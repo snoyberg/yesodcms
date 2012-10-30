@@ -1,10 +1,9 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Page
     ( getPageR
     , getPageR'
     ) where
 
-import Foundation
+import Import
 import qualified Data.Text as T
 import Handler.Wiki (findFile)
 import FileStore

@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FlexibleContexts #-}
 module FormatHandler.Html
     ( htmlFormatHandler
     , YesodAloha (..)
@@ -20,7 +17,7 @@ import Text.Lucius (lucius)
 import Control.Monad.IO.Class (liftIO)
 import Text.Hamlet (shamlet)
 import Data.Maybe (listToMaybe, mapMaybe)
-import Text.Blaze (preEscapedText)
+import Text.Blaze.Html (preEscapedToHtml)
 import qualified Data.Set as Set
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Text.Encoding.Error (lenientDecode)
@@ -29,7 +26,8 @@ import Data.Conduit.List (sourceList)
 import Text.HTML.TagSoup
 import Control.Arrow ((***))
 import Control.Applicative ((<$>), (<*>))
-import Text.Blaze (Html)
+import Text.Blaze.Html (Html)
+import Prelude
 
 splitTitle :: T.Text -> (Maybe T.Text, T.Text)
 splitTitle t =
@@ -75,7 +73,7 @@ htmlFormatHandler = FormatHandler
   where
     widget sm uri = do
         t <- fmap (snd . splitTitle) $ liftIO $ uriToText sm uri
-        toWidget $ preEscapedText t
+        toWidget $ preEscapedToHtml t
     plain = T.concat . mapMaybe plain' . parseTags
     plain' (TagText t) = Just t
     plain' _ = Nothing

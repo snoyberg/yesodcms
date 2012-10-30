@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Blog
     ( getBlogR
     , getBlogPostNoDateR
@@ -6,15 +5,16 @@ module Handler.Blog
     , getBlogArchiveR
     ) where
 
-import Foundation
-import Yesod.Goodies.Gravatar
+import Import
+import Prelude
+import Network.Gravatar
 import Handler.Comments (prettyDateTime)
-import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Arrow (second, (&&&))
 import Data.List (groupBy)
 import Data.Function (on)
 import Handler.Feed (blogWidget)
+import Data.Default (Default (..))
 
 getBlogR :: Handler ()
 getBlogR = do
@@ -45,7 +45,7 @@ getBlogPostR y m s = do
     let widget = blogWidget b
     defaultLayout $(widgetFile "blog")
   where
-    opts = defaultOptions
+    opts = def
         { gDefault = Just Identicon
         , gSize = Just $ Size 100
         }

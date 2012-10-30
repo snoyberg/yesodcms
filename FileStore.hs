@@ -1,9 +1,7 @@
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE OverloadedStrings #-}
 module FileStore where
 
 import Data.ByteString (ByteString)
-import Data.Conduit (Source (..), ($$), runResourceT, ResourceIO)
+import Data.Conduit (Source, ($$), runResourceT, MonadResource, transPipe, Pipe)
 import Data.Conduit.Binary (sourceFile, sinkFile)
 import qualified Data.Text as T
 import Prelude hiding (FilePath)
@@ -40,7 +38,7 @@ simpleFileStore dir = FileStore
     , fsPutFile = \t enum -> do
         let fp = dir </> fromText t
         createTree $ directory fp
-        runResourceT $ enum $$ sinkFile (encodeString fp)
+        runResourceT $ transPipe liftIO enum $$ sinkFile (encodeString fp)
     , fsDelete = \t -> do
         let fp = dir </> fromText t
         f <- isFile fp
@@ -63,17 +61,13 @@ simpleFileStore dir = FileStore
     , fsFromURI = \u -> if uriScheme u == "fs:" then Just (uriPath u) else Nothing
     }
 
-tryFiles :: ResourceIO m => FilePath -> URI -> [T.Text] -> Source m ByteString
-tryFiles _ uri [] = Source
-    { sourcePull = error $ "File not found: " ++ show (toNetworkURI uri)
-    , sourceClose = return ()
-    }
-tryFiles dir uri (t:ts) = Source
-    { sourcePull = do
-        let fp = dir </> fromText t
-        e <- liftIO $ isFile fp
-        sourcePull $ if e
-            then sourceFile (encodeString fp)
-            else tryFiles dir uri ts
-    , sourceClose = return ()
-    }
+tryFiles :: MonadResource m => FilePath -> URI -> [T.Text] -> Pipe l i ByteString u m ()
+tryFiles _ uri [] =
+    error $ "File not found: " ++ show (toNetworkURI uri)
+tryFiles dir uri (t:ts) = do
+    e <- liftIO $ isFile fp
+    if e
+        then sourceFile (encodeString fp)
+        else tryFiles dir uri ts
+  where
+    fp = dir </> fromText t

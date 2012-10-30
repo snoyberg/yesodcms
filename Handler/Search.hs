@@ -1,9 +1,8 @@
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
 module Handler.Search
     ( getSearchR
     ) where
 
-import Foundation
+import Import
 import Data.Maybe (fromMaybe, mapMaybe)
 import Text.Search.Sphinx
 import qualified Text.Search.Sphinx.Types as S
@@ -11,14 +10,14 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Maybe (catMaybes)
 import Control.Monad (forM)
-import Database.Persist.Store
+import Database.Persist.Store (PersistValue(PersistInt64))
 import qualified Text.Search.Sphinx.ExcerptConfiguration as E
 import Data.Text.Lazy.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (ignore)
-import Text.Blaze (preEscapedLazyText)
 import Handler.Profile (getLabels)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Text.Blaze.Html (preEscapedToHtml)
 
 data MInfo = MInfo
     { miFile :: T.Text

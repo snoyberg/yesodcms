@@ -1,7 +1,11 @@
 Default: &defaults
-  host: "10.0.0.3"
+  host: "*4" # any IPv4 host
   port: 3000
   connectionPoolSize: 10
+  approot: "http://localhost:3000"
+  copyright: Insert copyright statement here
+  #analytics: UA-YOURCODE
+
 
 Development:
   <<: *defaults
